@@ -70,7 +70,7 @@ func TestScoreboardView(t *testing.T) {
 	t.Run("displays help text", func(t *testing.T) {
 		m := NewModel(&mockClient{})
 		view := m.View()
-		if !strings.Contains(view, "move: <hjkli←↓↑→ >, <ctrl+w>: watch (browser), q/esc: quit") {
+		if !strings.Contains(view, "<hjkli←↓↑→ >: move, <enter>: detail, <ctrl+w>: watch (browser), <q/esc>: quit") {
 			t.Errorf("expected view to contain help text, got %q", view)
 		}
 	})
@@ -160,6 +160,33 @@ func TestScoreboardView(t *testing.T) {
 		_, cmd := m.Update(tickMsg{})
 		if cmd == nil {
 			t.Error("expected command to be returned on tickMsg")
+		}
+	})
+
+	t.Run("selects a game on enter", func(t *testing.T) {
+		games := []types.Game{
+			{GameId: "123", HomeTeam: types.Team{TeamTricode: "LAL"}},
+			{GameId: "456", HomeTeam: types.Team{TeamTricode: "GSW"}},
+		}
+		m := NewModel(&mockClient{games: games})
+		m.Games = games
+		m.Focus = 1 // Focus on second game
+
+		// Simulate Enter key
+		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+		if cmd == nil {
+			t.Fatal("expected command on Enter")
+		}
+
+		msg := cmd()
+		selectMsg, ok := msg.(SelectGameMsg)
+		if !ok {
+			t.Fatalf("expected SelectGameMsg, got %T", msg)
+		}
+
+		if selectMsg.GameId != "456" {
+			t.Errorf("expected GameId 456, got %s", selectMsg.GameId)
 		}
 	})
 }

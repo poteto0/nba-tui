@@ -6,12 +6,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"nba-tui/internal/nba"
-	"nba-tui/internal/ui/scoreboard"
+	"nba-tui/internal/ui/root"
 )
 
 func main() {
 	client := nba.NewClient()
-	m := scoreboard.NewModel(client)
+	m := root.NewModel(client)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

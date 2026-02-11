@@ -49,14 +49,14 @@ focus & push <enter> to detail view
 ```bash
 $ nba-tui
 moves
-<esc>: back, <hjkli←↓↑→ >: move, <enter>: window, <ctrl+w> watch (browser)
+<esc>: back, <hjkli←↓↑→ >: move, <ctrl+b>: focus box score, <ctrl+l>: focus game log, <ctrl+w> watch (browser)
 view
-<alt+d>: default, <alt+l>: line
-┌─────────────┐ ┌─────┐
-│          Final           │ │gamelog   │
-│ POR (103)  |  DEN (102)  │ │4Q(11:43) | Sharpe(POR) Made Jump Sh
-└─────────────┘ │...
-┌─────────────┐ │
+Selected Team: POR
+┌─────────────┐ ┌─────────────────────────┐
+│          Final           │ │         gamelog         │
+│ POR (103)  |  DEN (102)  │ │    1Q | 2Q | 3Q | 4Q     │
+└─────────────┘ │4Q(11:43) | Sharpe(POR) Made Jump Sh
+┌─────────────┐ │...
 │      Box Scores          │ │
 │PORtable view stats       │ │
 │...                       │ │
@@ -66,28 +66,19 @@ view
 
 #### forcus window key-bind
 
-##### BoxScore
+##### BoxScore & GameLog
 
-- move is like vim
-- switch is switch team showing box
+- focus switch: <ctrl+b> for BoxScore, <ctrl+l> for GameLog
+- scroll: <hjkli←↓↑→ > (vim-like)
+- team switch: <ctrl+s> switch team for both BoxScore and GameLog
+- period switch: <ctrl+q> switch period for GameLog (1Q -> 2Q -> ... -> Final -> 1Q)
 
-```bash
-$ nba-tui
-move
-<esc>: back, <hjkli←↓↑→ >: move(scroll),
-op
-<ctrl+s> switch
-┌─────────────┐ ┌─────────┐
-│          Final           │ │gamelog           │
-│ POR (103)  |  DEN (102)  │ │4Q(11:43) | Sharpe(POR) Made Jump Sh
-└─────────────┘ │...
-┌─────────────┐ │
-│      Box Scores          │ │
-│PORtable view stats       │ │
-│...                       │ │
-│...                       │ │
-└─────────────┘ │
-```
+##### UI Style
+- Selected Period in GameLog: Green color + Underline
+- Unselected Period in GameLog: Faint color
+- Selected Pane: Green border
+- Selected Team Display: "Selected Team: <TeamTriCode>" above panes
+
 
 ## Development
 

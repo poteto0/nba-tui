@@ -27,6 +27,10 @@ type GotScoreboardMsg struct {
 	Games []types.Game
 }
 
+type SelectGameMsg struct {
+	GameId string
+}
+
 type tickMsg time.Time
 
 func tick() tea.Cmd {
@@ -116,6 +120,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
+		case "enter":
+			if len(m.Games) > 0 {
+				return m, func() tea.Msg {
+					return SelectGameMsg{GameId: m.Games[m.Focus].GameId}
+				}
+			}
 		case "ctrl+w":
 			if len(m.Games) > 0 {
 				game := m.Games[m.Focus]
@@ -159,7 +169,7 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v", m.Err)
 	}
 
-	helpText := "move: <hjkli←↓↑→ >, <ctrl+w>: watch (browser), q/esc: quit"
+	helpText := "<hjkli←↓↑→ >: move, <enter>: detail, <ctrl+w>: watch (browser), <q/esc>: quit"
 	if !m.LastUpdated.IsZero() {
 		helpText = fmt.Sprintf("Last updated: %s\n%s", m.LastUpdated.Format(time.RFC1123), helpText)
 	}
