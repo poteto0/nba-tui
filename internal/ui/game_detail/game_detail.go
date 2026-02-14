@@ -195,85 +195,100 @@ func (m Model) View() string {
 	}
 
 	team := m.getCurrentTeam()
-	// 1. Top Section: Selected Team (Underlined and Green)
+
+	// 1. Calculate Vertical Heights based on ratios (Total 10 parts)
+	h_unit := m.height / 10
+	if h_unit < 1 {
+		h_unit = 1
+	}
+
+	// Selected Team: Always 1 line
+	h_selected := 1
 	selectedTeamView := styles.UnderlineStyle.Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
 
-	// 2. Bottom Section: Footer/Help
-	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+q>: period, <ctrl+w>: watch, <ctrl+c>: quit"
-	var footerText string
-	if !m.lastUpdated.IsZero() {
-		footerText = fmt.Sprintf("Last updated: %s\n%s", m.lastUpdated.Format(time.RFC1123), helpText)
-	} else {
-		footerText = helpText
+	// Header: 1 part (at least 4 lines for content box)
+	h_header_box := h_unit
+	if h_header_box < 4 {
+		h_header_box = 4
 	}
 
-	// 3. Middle Section: Box Score and Game Log
-	h_selected := lipgloss.Height(selectedTeamView)
-	h_footer := lipgloss.Height(footerText)
-	h_header := 4 // Border(2) + Content(2)
-	
-availableHeight := m.height - h_selected - h_header - h_footer - 1
-	
+	// Footer: 1 part (at least 1 line)
+	h_footer := h_unit
+	if h_footer < 1 {
+		h_footer = 1
+	}
+
+	// Main Area (Box Score + Game Log): Remaining height
+	h_main := m.height - h_selected - h_header_box - h_footer
+	if h_main < 4 {
+		// Fallback if terminal is very short
+		h_main = 0
+		h_header_box = m.height - h_selected - h_footer
+		if h_header_box < 3 {
+			h_header_box = 3
+		}
+	}
+
 	headerStr := m.renderHeaderStr()
-	var headerBox string
 	var mainView string
-
-	if availableHeight < 4 {
-		// Fallback: minimal view
-		headerBox = styles.BorderStyle.Width(m.width).Align(lipgloss.Center).Render(headerStr)
-		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, footerText)
-	}
+	var headerBox string
 
 	if m.width >= 100 {
-		// Horizontal layout
-		bsWidth := (m.width * 6) / 10
-		glWidth := m.width - bsWidth
-		
-		mainHeight := availableHeight
+		// Horizontal Layout: widths 6:4
+		w_boxscore := (m.width * 6) / 10
+		w_gamelog := m.width - w_boxscore
 
-		boxScoreContent := m.renderBoxScore(team, bsWidth-2, mainHeight-2)
-		bsStyle := styles.BorderStyle
-		if m.focus == boxScoreFocus {
-			bsStyle = styles.ActiveBorderStyle
+		if h_main > 0 {
+			bsContent := m.renderBoxScore(team, w_boxscore-2, h_main-2)
+			bsStyle := styles.BorderStyle
+			if m.focus == boxScoreFocus {
+				bsStyle = styles.ActiveBorderStyle
+			}
+			boxScore := bsStyle.Width(w_boxscore).Height(h_main).Render(bsContent)
+
+			glContent := m.renderGameLog(w_gamelog-2, h_main-2)
+			glStyle := styles.BorderStyle
+			if m.focus == gameLogFocus {
+				glStyle = styles.ActiveBorderStyle
+			}
+			gameLog := glStyle.Width(w_gamelog).Height(h_main).Render(glContent)
+
+			mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
 		}
-		boxScore := bsStyle.Width(bsWidth).Height(mainHeight).Render(boxScoreContent)
 
-		gameLogContent := m.renderGameLog(glWidth-2, mainHeight-2)
-		glStyle := styles.BorderStyle
-		if m.focus == gameLogFocus {
-			glStyle = styles.ActiveBorderStyle
-		}
-		gameLog := glStyle.Width(glWidth).Height(mainHeight).Render(gameLogContent)
-
-		mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
-		
-		// Align header with combined width of boxes
-		headerBox = styles.BorderStyle.Width(bsWidth + glWidth).Align(lipgloss.Center).Render(headerStr)
+		// Header spans full width
+		headerBox = styles.BorderStyle.Width(m.width).Height(h_header_box).Align(lipgloss.Center, lipgloss.Center).Render(headerStr)
 	} else {
-		// Vertical layout
-		mainHeight := availableHeight
-		bsHeight := mainHeight / 2
-		glHeight := mainHeight - bsHeight
+		// Vertical Layout: heights 4:4 (equal split of h_main)
+		if h_main > 0 {
+			h_boxscore := h_main / 2
+			h_gamelog := h_main - h_boxscore
 
-		boxScoreContent := m.renderBoxScore(team, m.width-2, bsHeight-2)
-		bsStyle := styles.BorderStyle
-		if m.focus == boxScoreFocus {
-			bsStyle = styles.ActiveBorderStyle
+			bsContent := m.renderBoxScore(team, m.width-2, h_boxscore-2)
+			bsStyle := styles.BorderStyle
+			if m.focus == boxScoreFocus {
+				bsStyle = styles.ActiveBorderStyle
+			}
+			boxScore := bsStyle.Width(m.width).Height(h_boxscore).Render(bsContent)
+
+			glContent := m.renderGameLog(m.width-2, h_gamelog-2)
+			glStyle := styles.BorderStyle
+			if m.focus == gameLogFocus {
+				glStyle = styles.ActiveBorderStyle
+			}
+			gameLog := glStyle.Width(m.width).Height(h_gamelog).Render(glContent)
+
+			mainView = lipgloss.JoinVertical(lipgloss.Left, boxScore, gameLog)
 		}
-		boxScore := bsStyle.Width(m.width).Height(bsHeight).Render(boxScoreContent)
 
-		gameLogContent := m.renderGameLog(m.width-2, glHeight-2)
-		glStyle := styles.BorderStyle
-		if m.focus == gameLogFocus {
-			glStyle = styles.ActiveBorderStyle
-		}
-		gameLog := glStyle.Width(m.width).Height(glHeight).Render(gameLogContent)
-
-		mainView = lipgloss.JoinVertical(lipgloss.Left, boxScore, gameLog)
-		
-		headerBox = styles.BorderStyle.Width(m.width).Align(lipgloss.Center).Render(headerStr)
+		headerBox = styles.BorderStyle.Width(m.width).Height(h_header_box).Align(lipgloss.Center, lipgloss.Center).Render(headerStr)
 	}
 
+	footerText := m.renderFooter(m.width)
+
+	if mainView == "" {
+		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, footerText)
+	}
 	return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, mainView, footerText)
 }
 
@@ -302,6 +317,19 @@ func (m Model) renderHeaderStr() string {
 		homeTricode, homeScore,
 		awayTricode, awayScore,
 	)
+}
+
+func (m Model) renderFooter(width int) string {
+	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+q>: period, <ctrl+w>: watch, <ctrl+c>: quit"
+	var footerText string
+	if !m.lastUpdated.IsZero() {
+		footerText = fmt.Sprintf("Last updated: %s\n%s", m.lastUpdated.Format(time.RFC1123), helpText)
+	} else {
+		footerText = helpText
+	}
+	// Note: We don't apply Width here because JoinVertical will align it, 
+	// and excessive width wrapping might push content up.
+	return footerText
 }
 
 func (m Model) renderGameLog(width, height int) string {
