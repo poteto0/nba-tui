@@ -2,6 +2,7 @@ package game_detail
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,11 @@ import (
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func stripANSI(s string) string {
+	ansi := regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+	return ansi.ReplaceAllString(s, "")
 }
 
 // Mock Client
@@ -445,15 +451,11 @@ func TestUpdate_Navigation(t *testing.T) {
 
 	// Check Selected Team display
 	view := m3.View()
-	if !strings.Contains(view, "Selected Team: LAL") {
-		t.Errorf("View should show Selected Team: LAL, got: %s", view)
-	}
+	assert.Contains(t, stripANSI(view), "Selected Team: LAL")
 
 	// Switch team and check display
 	m4, _ := m3.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
-	if !strings.Contains(m4.View(), "Selected Team: GSW") {
-		t.Errorf("View should show Selected Team: GSW after switch")
-	}
+	assert.Contains(t, stripANSI(m4.View()), "Selected Team: GSW")
 }
 
 func TestView_GameLogFiltering(t *testing.T) {
