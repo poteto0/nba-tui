@@ -11,6 +11,10 @@ var (
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("2")) // Green
 
+	InactiveBorderStyle = lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240"))
+
 	TableHeaderStyle = lipgloss.NewStyle().
 				Bold(true).
 				Border(lipgloss.NormalBorder(), false, false, true, false).

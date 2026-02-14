@@ -2,6 +2,7 @@ package scoreboard
 
 import (
 	"fmt"
+	"nba-tui/internal/ui/styles"
 	"os/exec"
 	"strings"
 	"time"
@@ -9,18 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/poteto0/go-nba-sdk/types"
-)
-
-var (
-	activeStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("2")) // Green
-
-	inactiveStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("7"))
-
-	boldStyle = lipgloss.NewStyle().Bold(true)
 )
 
 type GotScoreboardMsg struct {
@@ -185,9 +174,9 @@ func (m Model) View() string {
 
 	var boards []string
 	for i, game := range m.Games {
-		style := inactiveStyle
+		style := styles.InactiveBorderStyle
 		if i == m.Focus {
-			style = activeStyle
+			style = styles.ActiveBorderStyle
 		}
 
 		status := ""
@@ -202,11 +191,11 @@ func (m Model) View() string {
 		awayScoreStr := formatScore(game.AwayTeam.Score)
 
 		if game.HomeTeam.Score > game.AwayTeam.Score {
-			homeName = boldStyle.Render(homeName)
-			homeScoreStr = boldStyle.Render(homeScoreStr)
+			homeName = styles.BoldStyle.Render(homeName)
+			homeScoreStr = styles.BoldStyle.Render(homeScoreStr)
 		} else if game.AwayTeam.Score > game.HomeTeam.Score {
-			awayName = boldStyle.Render(awayName)
-			awayScoreStr = boldStyle.Render(awayScoreStr)
+			awayName = styles.BoldStyle.Render(awayName)
+			awayScoreStr = styles.BoldStyle.Render(awayScoreStr)
 		}
 
 		content := fmt.Sprintf(

@@ -1,6 +1,7 @@
 package game_detail
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -130,16 +131,155 @@ func TestView_Layout(t *testing.T) {
 			GameId: "123",
 		},
 	}
-	// Set size to avoid "Too small"
+
+	t.Run("horizontal layout", func(t *testing.T) {
+		m.width = 100
+		m.height = 40
+		view := m.View()
+		assert.Contains(t, view, "Box Scores")
+		assert.Contains(t, view, "gamelog")
+	})
+
+	t.Run("vertical layout", func(t *testing.T) {
+		m.width = 40
+		m.height = 40
+		view := m.View()
+		assert.Contains(t, view, "Box Scores")
+		assert.Contains(t, view, "gamelog")
+	})
+
+	t.Run("terminal too small", func(t *testing.T) {
+		m.width = 10
+		m.height = 5
+		view := m.View()
+		assert.Contains(t, view, "Terminal too small")
+	})
+
+	t.Run("available height too small", func(t *testing.T) {
+		m.width = 50
+		m.height = 10
+		view := m.View()
+		assert.Contains(t, view, "Terminal height too small")
+	})
+}
+
+func TestUpdate_KeyEvents(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
+	m.width = 100
+	m.height = 40
+	m.boxScore = types.LiveBoxScoreResponse{
+		Game: types.Game{
+			GameId:   "123",
+			HomeTeam: types.Team{TeamId: 1, TeamTricode: "LAL", Players: &[]types.Player{{FamilyName: "James"}}},
+			AwayTeam: types.Team{TeamId: 2, TeamTricode: "GSW"},
+		},
+	}
+
+	t.Run("ctrl+q switch period", func(t *testing.T) {
+		m.selectedPeriod = 1
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
+		assert.Equal(t, 2, model.(Model).selectedPeriod)
+
+		m.selectedPeriod = 4
+		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
+		assert.Equal(t, 1, model.(Model).selectedPeriod)
+	})
+
+	t.Run("ctrl+b ctrl+l switch focus", func(t *testing.T) {
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlL})
+		assert.Equal(t, gameLogFocus, model.(Model).focus)
+
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyCtrlB})
+		assert.Equal(t, boxScoreFocus, model.(Model).focus)
+	})
+
+	t.Run("navigation down/up boxscore", func(t *testing.T) {
+		m.focus = boxScoreFocus
+		m.boxOffset = 0
+		players := make([]types.Player, 5)
+		m.boxScore.Game.HomeTeam.Players = &players
+
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		assert.Equal(t, 1, model.(Model).boxOffset)
+
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		assert.Equal(t, 0, model.(Model).boxOffset)
+	})
+
+	t.Run("navigation down/up gamelog", func(t *testing.T) {
+		m.focus = gameLogFocus
+		m.logOffset = 0
+		m.selectedPeriod = 1
+		m.pbp.Game.Actions = []types.Action{
+			{Period: 1, TeamID: 1, Description: "A1"},
+			{Period: 1, TeamID: 1, Description: "A2"},
+		}
+
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		assert.Equal(t, 1, model.(Model).logOffset)
+
+		model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		assert.Equal(t, 0, model.(Model).logOffset)
+	})
+
+	t.Run("ctrl+c quit", func(t *testing.T) {
+		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+		assert.NotNil(t, cmd)
+	})
+}
+
+func TestModel_FetchFunctions(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
+
+	t.Run("fetch box score success", func(t *testing.T) {
+		msg := m.fetchBoxScore()
+		_, ok := msg.(BoxScoreMsg)
+		assert.True(t, ok)
+	})
+
+	t.Run("fetch playbyplay success", func(t *testing.T) {
+		msg := m.fetchPlayByPlay()
+		_, ok := msg.(PlayByPlayMsg)
+		assert.True(t, ok)
+	})
+
+	t.Run("fetch failure", func(t *testing.T) {
+		client.err = fmt.Errorf("api error")
+		msg := m.fetchBoxScore()
+		assert.Equal(t, client.err, msg.(ErrorMsg))
+
+		msg = m.fetchPlayByPlay()
+		assert.Equal(t, client.err, msg.(ErrorMsg))
+		client.err = nil
+	})
+}
+
+func TestView_RenderEdgeCases(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
 	m.width = 100
 	m.height = 40
 
-	view := m.View()
-	if !strings.Contains(view, "Box Scores") || !strings.Contains(view, "gamelog") {
-		t.Errorf("View should contain layout headers, got: %s", view)
-	}
-}
+	t.Run("player without statistics", func(t *testing.T) {
+		players := []types.Player{{FamilyName: "James", Statistics: nil}}
+		m.boxScore.Game.GameId = "123"
+		m.boxScore.Game.HomeTeam.Players = &players
+		view := m.View()
+		assert.Contains(t, view, "James")
+	})
 
+	t.Run("gamelog truncation", func(t *testing.T) {
+		m.width = 30
+		m.pbp.Game.Actions = []types.Action{
+			{Period: 1, TeamID: 1, Clock: "12:00", Description: "Very long description that should be truncated"},
+		}
+		m.boxScore.Game.HomeTeam.TeamId = 1
+		view := m.View()
+		assert.Contains(t, view, "...")
+	})
+}
 func TestUpdate_SwitchTeam(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
@@ -330,36 +470,81 @@ func TestView_GameLogFiltering(t *testing.T) {
 
 	// 1. Initial State: Team LAL, Period 1
 	view1 := m.View()
-	if !strings.Contains(view1, "LAL Action Q1") {
-		t.Errorf("Should contain LAL Action Q1")
-	}
-	if strings.Contains(view1, "GSW Action Q1") {
-		t.Errorf("Should NOT contain GSW Action Q1 (filtered by team)")
-	}
+	assert.Contains(t, view1, "LAL Action Q1")
+	assert.NotContains(t, view1, "GSW Action Q1")
 
 	// 2. Switch to Team GSW (Ctrl+S) -> Still Period 1
 	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
 	view2 := m2.View()
-	if !strings.Contains(view2, "GSW Action Q1") {
-		t.Errorf("Should contain GSW Action Q1 after switching team")
-	}
-	if strings.Contains(view2, "LAL Action Q1") {
-		t.Errorf("Should NOT contain LAL Action Q1 after switching team")
-	}
+	assert.Contains(t, view2, "GSW Action Q1")
+	assert.NotContains(t, view2, "LAL Action Q1")
 
 	// 3. Switch to Period 2 (Ctrl+Q) -> Team GSW
 	m3, _ := m2.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
 	view3 := m3.View()
-	if !strings.Contains(view3, "GSW Action Q2") {
-		t.Errorf("Should contain GSW Action Q2 after switching period")
-	}
-	if strings.Contains(view3, "GSW Action Q1") {
-		t.Errorf("Should NOT contain GSW Action Q1 (filtered by period)")
-	}
+	assert.Contains(t, view3, "GSW Action Q2")
+	assert.NotContains(t, view3, "GSW Action Q1")
 
 	// 4. Check period selector UI
-	// Since 2Q might be styled like \x1b[4m2\x1b[0m\x1b[4mQ\x1b[0m, we check separately
-	if !strings.Contains(view3, "1") || !strings.Contains(view3, "Q") || !strings.Contains(view3, "2") {
-		t.Errorf("Should show period selector elements, got: %q", view3)
-	}
+	assert.Contains(t, view3, "1")
+	assert.Contains(t, view3, "Q")
+	assert.Contains(t, view3, "2")
+}
+
+func TestModel_GettersAndSetters(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
+	
+	m.showingHome = false
+	assert.False(t, m.IsShowingHome())
+	
+	m.focus = gameLogFocus
+	assert.Equal(t, int(gameLogFocus), m.GetFocus())
+	
+	m.logOffset = 5
+	assert.Equal(t, 5, m.GetLogOffset())
+	
+	m.boxOffset = 10
+	assert.Equal(t, 10, m.GetBoxOffset())
+	
+	m.selectedPeriod = 3
+	assert.Equal(t, 3, m.GetSelectedPeriod())
+	
+	now := time.Now()
+	m.SetLastUpdated(now)
+	assert.Equal(t, now, m.lastUpdated)
+}
+
+func TestUpdate_KeyEvents_Boundaries(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
+	m.boxScore.Game.HomeTeam.Players = &[]types.Player{{FamilyName: "P1"}}
+	
+	t.Run("boxscore boundaries", func(t *testing.T) {
+		m.focus = boxScoreFocus
+		m.boxOffset = 0
+		// Up at 0
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		assert.Equal(t, 0, model.(Model).boxOffset)
+		
+		// Down at end (only 1 player)
+		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		assert.Equal(t, 0, model.(Model).boxOffset)
+	})
+	
+	t.Run("gamelog boundaries", func(t *testing.T) {
+		m.focus = gameLogFocus
+		m.logOffset = 0
+		m.pbp.Game.Actions = []types.Action{{Period: 1, TeamID: 0, Description: "A1"}}
+		m.boxScore.Game.HomeTeam.TeamId = 0
+		m.selectedPeriod = 1
+		
+		// Up at 0
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+		assert.Equal(t, 0, model.(Model).logOffset)
+		
+		// Down at end
+		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+		assert.Equal(t, 0, model.(Model).logOffset)
+	})
 }

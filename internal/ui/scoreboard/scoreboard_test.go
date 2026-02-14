@@ -1,7 +1,7 @@
 package scoreboard
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"github.com/poteto0/go-nba-sdk/types"
+	"github.com/stretchr/testify/assert"
 )
 
 type mockClient struct {
@@ -22,6 +23,7 @@ func (m *mockClient) GetScoreboard() ([]types.Game, error) {
 
 func TestScoreboardView(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
+
 	t.Run("renders a finished game", func(t *testing.T) {
 		games := []types.Game{
 			{
@@ -36,15 +38,11 @@ func TestScoreboardView(t *testing.T) {
 		m.Games = games
 
 		view := m.View()
-		if !strings.Contains(view, "Final") {
-			t.Errorf("expected view to contain 'Final', got %s", view)
-		}
-		if !strings.Contains(view, "POR") || !strings.Contains(view, "DEN") {
-			t.Errorf("expected view to contain team codes, got %s", view)
-		}
-		if !strings.Contains(view, "103") || !strings.Contains(view, "102") {
-			t.Errorf("expected view to contain scores, got %s", view)
-		}
+		assert.Contains(t, view, "Final")
+		assert.Contains(t, view, "POR")
+		assert.Contains(t, view, "DEN")
+		assert.Contains(t, view, "103")
+		assert.Contains(t, view, "102")
 	})
 
 	t.Run("bolds winning team", func(t *testing.T) {
@@ -59,20 +57,14 @@ func TestScoreboardView(t *testing.T) {
 
 		view := m.View()
 		// Bold style escape code is \x1b[1m
-		if !strings.Contains(view, "\x1b[1mPOR\x1b[0m") {
-			t.Errorf("expected POR to be bolded, got %q", view)
-		}
-		if !strings.Contains(view, "\x1b[1m103\x1b[0m") {
-			t.Errorf("expected 103 to be bolded, got %q", view)
-		}
+		assert.Contains(t, view, "\x1b[1mPOR\x1b[0m")
+		assert.Contains(t, view, "\x1b[1m103\x1b[0m")
 	})
 
 	t.Run("displays help text", func(t *testing.T) {
 		m := NewModel(&mockClient{})
 		view := m.View()
-		if !strings.Contains(view, "<hjkli←↓↑→ >: move, <enter>: detail, <ctrl+w>: watch (browser), <q/esc>: quit") {
-			t.Errorf("expected view to contain help text, got %q", view)
-		}
+		assert.Contains(t, view, "<hjkli←↓↑→ >: move, <enter>: detail, <ctrl+w>: watch (browser), <q/esc>: quit")
 	})
 
 	t.Run("formats scores correctly", func(t *testing.T) {
@@ -91,13 +83,9 @@ func TestScoreboardView(t *testing.T) {
 		view := m.View()
 
 		// 1 digit: " 9 " (space, 9, space)
-		if !strings.Contains(view, " 9 ") {
-			t.Errorf("expected 1-digit score to be centered with spaces, got view: %s", view)
-		}
+		assert.Contains(t, view, " 9 ")
 		// 2 digits: " 99" (space, 99)
-		if !strings.Contains(view, " 99") {
-			t.Errorf("expected 2-digit score to be left-padded with one space, got view: %s", view)
-		}
+		assert.Contains(t, view, " 99")
 	})
 
 	t.Run("displays last updated time", func(t *testing.T) {
@@ -108,9 +96,7 @@ func TestScoreboardView(t *testing.T) {
 
 		view := m.View()
 		expectedTimeStr := fixedTime.Format(time.RFC1123)
-		if !strings.Contains(view, expectedTimeStr) {
-			t.Errorf("expected view to contain last updated time %q, got %q", expectedTimeStr, view)
-		}
+		assert.Contains(t, view, expectedTimeStr)
 	})
 
 	t.Run("calculates columns and handles grid navigation", func(t *testing.T) {
@@ -120,47 +106,33 @@ func TestScoreboardView(t *testing.T) {
 		m.Games = games
 
 		// Simulate window size that fits 2 columns
-		// Assuming a box width around 16-20 chars.
-		// Let's say 40 width is enough for 2 columns.
 		m.Width = 40
-		m.calculateColumns() // Helper to trigger logic if extracted
+		m.calculateColumns()
 
-		if m.Columns != 2 {
-			t.Errorf("expected 2 columns for width 40, got %d", m.Columns)
-		}
+		assert.Equal(t, 2, m.Columns)
 
 		// Initial focus 0 (0,0)
 		// Move Right -> 1 (0,1)
 		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
-		if m.Focus != 1 {
-			t.Errorf("expected focus 1 after moving right, got %d", m.Focus)
-		}
+		assert.Equal(t, 1, m.Focus)
 
 		// Move Down -> 3 (1,1) (1 + 2 columns)
 		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-		if m.Focus != 3 {
-			t.Errorf("expected focus 3 after moving down from 1, got %d", m.Focus)
-		}
+		assert.Equal(t, 3, m.Focus)
 
 		// Move Up -> 1 (0,1) (3 - 2 columns)
 		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
-		if m.Focus != 1 {
-			t.Errorf("expected focus 1 after moving up from 3, got %d", m.Focus)
-		}
+		assert.Equal(t, 1, m.Focus)
 
 		// Move Left -> 0
 		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
-		if m.Focus != 0 {
-			t.Errorf("expected focus 0 after moving left, got %d", m.Focus)
-		}
+		assert.Equal(t, 0, m.Focus)
 	})
 
 	t.Run("handles tickMsg", func(t *testing.T) {
 		m := NewModel(&mockClient{})
 		_, cmd := m.Update(tickMsg{})
-		if cmd == nil {
-			t.Error("expected command to be returned on tickMsg")
-		}
+		assert.NotNil(t, cmd)
 	})
 
 	t.Run("selects a game on enter", func(t *testing.T) {
@@ -174,20 +146,135 @@ func TestScoreboardView(t *testing.T) {
 
 		// Simulate Enter key
 		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-
-		if cmd == nil {
-			t.Fatal("expected command on Enter")
-		}
+		assert.NotNil(t, cmd)
 
 		msg := cmd()
 		selectMsg, ok := msg.(SelectGameMsg)
-		if !ok {
-			t.Fatalf("expected SelectGameMsg, got %T", msg)
-		}
+		assert.True(t, ok)
+		assert.Equal(t, "456", selectMsg.GameId)
+	})
 
-		if selectMsg.GameId != "456" {
-			t.Errorf("expected GameId 456, got %s", selectMsg.GameId)
+	t.Run("handles error message", func(t *testing.T) {
+		m := NewModel(&mockClient{})
+		err := fmt.Errorf("api error")
+		updatedModel, _ := m.Update(err)
+		assert.Equal(t, err, updatedModel.(Model).Err)
+		assert.Contains(t, updatedModel.View(), "Error: api error")
+	})
+
+	t.Run("handles window size message", func(t *testing.T) {
+		m := NewModel(&mockClient{})
+		updatedModel, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
+		assert.Equal(t, 100, updatedModel.(Model).Width)
+		assert.Equal(t, 50, updatedModel.(Model).Height)
+	})
+
+	t.Run("handles quit keys", func(t *testing.T) {
+		m := NewModel(&mockClient{})
+		keys := []string{"q", "esc", "ctrl+c"}
+		for _, k := range keys {
+			_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)})
+			if k == "ctrl+c" {
+				_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+			} else if k == "esc" {
+				_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+			}
+			assert.NotNil(t, cmd)
+			// tea.Quit command is not easily inspectable but we expect it.
 		}
+	})
+
+	t.Run("handles ctrl+w watch key", func(t *testing.T) {
+		games := []types.Game{{GameId: "123"}}
+		m := NewModel(&mockClient{games: games})
+		m.Games = games
+		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlW})
+		assert.Nil(t, cmd) // exec.Command().Start() returns nil cmd in tea
+	})
+
+	t.Run("renders away team winner", func(t *testing.T) {
+		games := []types.Game{
+			{
+				HomeTeam: types.Team{TeamTricode: "POR", Score: 100},
+				AwayTeam: types.Team{TeamTricode: "DEN", Score: 103},
+			},
+		}
+		m := NewModel(&mockClient{games: games})
+		m.Games = games
+		view := m.View()
+		assert.Contains(t, view, "\x1b[1mDEN\x1b[0m")
+		assert.Contains(t, view, "\x1b[1m103\x1b[0m")
+	})
+
+	t.Run("renders live game status", func(t *testing.T) {
+		games := []types.Game{
+			{
+				HomeTeam:   types.Team{TeamTricode: "POR"},
+				AwayTeam:   types.Team{TeamTricode: "DEN"},
+				Period:     2,
+				GameClock:  "5:00",
+				GameStatus: 2,
+			},
+		}
+		m := NewModel(&mockClient{games: games})
+		m.Games = games
+		view := m.View()
+		assert.Contains(t, view, "2Q (5:00)")
+	})
+
+	t.Run("navigation boundaries", func(t *testing.T) {
+		games := make([]types.Game, 2)
+		m := NewModel(&mockClient{games: games})
+		m.Games = games
+		m.Columns = 1
+
+		// Left boundary
+		m.Focus = 0
+		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyLeft})
+		assert.Equal(t, 0, m.Focus)
+
+		// Right boundary
+		m.Focus = 1
+		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyRight})
+		assert.Equal(t, 1, m.Focus)
+
+		// Up boundary
+		m.Focus = 0
+		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyUp})
+		assert.Equal(t, 0, m.Focus)
+
+		// Down boundary
+		m.Focus = 1
+		m, _ = updateModel(m, tea.KeyMsg{Type: tea.KeyDown})
+		assert.Equal(t, 1, m.Focus)
+	})
+
+	t.Run("fetch scoreboard success", func(t *testing.T) {
+		games := []types.Game{{GameId: "123"}}
+		client := &mockClient{games: games}
+		m := NewModel(client)
+		cmd := m.FetchScoreboard()
+		msg := cmd()
+		assert.Equal(t, GotScoreboardMsg{Games: games}, msg)
+
+		updatedModel, _ := m.Update(msg)
+		assert.Equal(t, games, updatedModel.(Model).Games)
+	})
+
+	t.Run("fetch scoreboard failure", func(t *testing.T) {
+		err := fmt.Errorf("network error")
+		client := &mockClient{err: err}
+		m := NewModel(client)
+		cmd := m.FetchScoreboard()
+		msg := cmd()
+		assert.Equal(t, err, msg)
+	})
+
+	t.Run("calculateColumns with zero width", func(t *testing.T) {
+		m := NewModel(&mockClient{})
+		m.Width = 0
+		m.calculateColumns()
+		assert.Equal(t, 1, m.Columns)
 	})
 }
 
