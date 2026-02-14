@@ -195,9 +195,10 @@ func (m Model) View() string {
 	}
 
 	team := m.getCurrentTeam()
+	// 1. Top Section: Selected Team (Underlined and Green)
 	selectedTeamView := styles.UnderlineStyle.Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
 
-	// 2. Bottom Section
+	// 2. Bottom Section: Footer/Help
 	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+q>: period, <ctrl+w>: watch, <ctrl+c>: quit"
 	var footerText string
 	if !m.lastUpdated.IsZero() {
@@ -205,57 +206,54 @@ func (m Model) View() string {
 	} else {
 		footerText = helpText
 	}
-	footerView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(footerText)
 
-	// 3. Middle Section
+	// 3. Middle Section: Box Score and Game Log
 	h_selected := lipgloss.Height(selectedTeamView)
-	h_footer := lipgloss.Height(footerView)
+	h_footer := lipgloss.Height(footerText)
+	h_header := 4 // Border(2) + Content(2)
 	
-	// We need header height to calculate availableHeight, but header width depends on layout.
-	// Header is 4 lines (2 border + 2 content)
-	h_header := 4
+availableHeight := m.height - h_selected - h_header - h_footer - 1
 	
-	availableHeight := m.height - h_selected - h_header - h_footer - 1
-	if availableHeight < 4 {
-		headerStr := m.renderHeaderStr()
-		headerBox := styles.BorderStyle.Width(m.width - 2).Align(lipgloss.Center).Render(headerStr)
-		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, footerView)
-	}
-
-	var mainView string
-	var headerBox string
 	headerStr := m.renderHeaderStr()
+	var headerBox string
+	var mainView string
+
+	if availableHeight < 4 {
+		// Fallback: minimal view
+		headerBox = styles.BorderStyle.Width(m.width).Align(lipgloss.Center).Render(headerStr)
+		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, footerText)
+	}
 
 	if m.width >= 100 {
 		// Horizontal layout
 		bsWidth := (m.width * 6) / 10
 		glWidth := m.width - bsWidth
 		
-		bsHeight := availableHeight
-		glHeight := availableHeight // Reverted to match boxscore height
+		mainHeight := availableHeight
 
-		boxScoreContent := m.renderBoxScore(team, bsWidth-2, bsHeight-2)
+		boxScoreContent := m.renderBoxScore(team, bsWidth-2, mainHeight-2)
 		bsStyle := styles.BorderStyle
 		if m.focus == boxScoreFocus {
 			bsStyle = styles.ActiveBorderStyle
 		}
-		boxScore := bsStyle.Width(bsWidth).Height(bsHeight).Render(boxScoreContent)
+		boxScore := bsStyle.Width(bsWidth).Height(mainHeight).Render(boxScoreContent)
 
-		gameLogContent := m.renderGameLog(glWidth-2, glHeight-2)
+		gameLogContent := m.renderGameLog(glWidth-2, mainHeight-2)
 		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
 			glStyle = styles.ActiveBorderStyle
 		}
-		gameLog := glStyle.Width(glWidth).Height(glHeight).Render(gameLogContent)
+		gameLog := glStyle.Width(glWidth).Height(mainHeight).Render(gameLogContent)
 
 		mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
 		
-		// Align header with combined width
+		// Align header with combined width of boxes
 		headerBox = styles.BorderStyle.Width(bsWidth + glWidth).Align(lipgloss.Center).Render(headerStr)
 	} else {
 		// Vertical layout
-		bsHeight := availableHeight / 2
-		glHeight := availableHeight - bsHeight
+		mainHeight := availableHeight
+		bsHeight := mainHeight / 2
+		glHeight := mainHeight - bsHeight
 
 		boxScoreContent := m.renderBoxScore(team, m.width-2, bsHeight-2)
 		bsStyle := styles.BorderStyle
@@ -276,9 +274,7 @@ func (m Model) View() string {
 		headerBox = styles.BorderStyle.Width(m.width).Align(lipgloss.Center).Render(headerStr)
 	}
 
-	headerView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(headerBox)
-
-	return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerView, mainView, footerView)
+	return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerBox, mainView, footerText)
 }
 
 func (m Model) renderHeaderStr() string {
