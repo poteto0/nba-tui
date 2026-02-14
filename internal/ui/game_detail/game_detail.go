@@ -194,19 +194,19 @@ func (m Model) View() string {
 		return "Terminal too small. Please enlarge."
 	}
 
-	// 1. Top Section: Selected Team and Header
+	// 1. Top Section
 	team := m.getCurrentTeam()
 	selectedTeamView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
 
 	headerStr := m.renderHeaderStr()
-	headerWidth := m.width - 2
-	if headerWidth > 50 {
-		headerWidth = 50
+	headerContentWidth := m.width - 2
+	if headerContentWidth > 48 {
+		headerContentWidth = 48
 	}
-	headerBox := styles.BorderStyle.Width(headerWidth).Align(lipgloss.Center).Render(headerStr)
+	headerBox := styles.BorderStyle.Width(headerContentWidth).Align(lipgloss.Center).Render(headerStr)
 	headerView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(headerBox)
 
-	// 2. Bottom Section: Footer/Help
+	// 2. Bottom Section
 	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+q>: period, <ctrl+w>: watch, <ctrl+c>: quit"
 	var footerText string
 	if !m.lastUpdated.IsZero() {
@@ -216,13 +216,13 @@ func (m Model) View() string {
 	}
 	footerView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(footerText)
 
-	// 3. Middle Section: Box Score and Game Log
-	topHeight := lipgloss.Height(selectedTeamView) + lipgloss.Height(headerView)
-	footerHeight := lipgloss.Height(footerView)
-	availableHeight := m.height - topHeight - footerHeight - 1 // -1 for safety
-
+	// 3. Middle Section
+	h_selected := lipgloss.Height(selectedTeamView)
+	h_header := lipgloss.Height(headerView)
+	h_footer := lipgloss.Height(footerView)
+	
+availableHeight := m.height - h_selected - h_header - h_footer - 1
 	if availableHeight < 4 {
-		// Just show top and bottom if there's no space for main content
 		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerView, footerView)
 	}
 
@@ -230,21 +230,22 @@ func (m Model) View() string {
 	if m.width >= 100 {
 		// Horizontal layout
 		bsWidth := (m.width * 6) / 10
-		glWidth := m.width - bsWidth - 1 // -1 for spacing
-
+		glWidth := m.width - bsWidth
+		
+		// Subtract border space (2) for content width and height
 		boxScoreContent := m.renderBoxScore(team, bsWidth-2, availableHeight-2)
 		bsStyle := styles.BorderStyle
 		if m.focus == boxScoreFocus {
 			bsStyle = styles.ActiveBorderStyle
 		}
-		boxScore := bsStyle.Width(bsWidth).Height(availableHeight).Render(boxScoreContent)
+		boxScore := bsStyle.Width(bsWidth - 2).Height(availableHeight - 2).Render(boxScoreContent)
 
 		gameLogContent := m.renderGameLog(glWidth-2, availableHeight-2)
 		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
 			glStyle = styles.ActiveBorderStyle
 		}
-		gameLog := glStyle.Width(glWidth).Height(availableHeight).Render(gameLogContent)
+		gameLog := glStyle.Width(glWidth - 2).Height(availableHeight - 2).Render(gameLogContent)
 
 		mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
 	} else {
@@ -257,14 +258,14 @@ func (m Model) View() string {
 		if m.focus == boxScoreFocus {
 			bsStyle = styles.ActiveBorderStyle
 		}
-		boxScore := bsStyle.Width(m.width - 2).Height(bsHeight).Render(boxScoreContent)
+		boxScore := bsStyle.Width(m.width - 2).Height(bsHeight - 2).Render(boxScoreContent)
 
 		gameLogContent := m.renderGameLog(m.width-2, glHeight-2)
 		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
 			glStyle = styles.ActiveBorderStyle
 		}
-		gameLog := glStyle.Width(m.width - 2).Height(glHeight).Render(gameLogContent)
+		gameLog := glStyle.Width(m.width - 2).Height(glHeight - 2).Render(gameLogContent)
 
 		mainView = lipgloss.JoinVertical(lipgloss.Left, boxScore, gameLog)
 	}
