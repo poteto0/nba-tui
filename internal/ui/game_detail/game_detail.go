@@ -2,6 +2,7 @@ package game_detail
 
 import (
 	"fmt"
+	"nba-tui/internal/ui/styles"
 	"os/exec"
 	"strings"
 	"time"
@@ -16,27 +17,6 @@ type focusArea int
 const (
 	boxScoreFocus focusArea = iota
 	gameLogFocus
-)
-
-var (
-	borderStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240"))
-
-	activeBorderStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("2")) // Green
-
-	tableHeaderStyle = lipgloss.NewStyle().
-		Bold(true).
-		Border(lipgloss.NormalBorder(), false, false, true, false).
-		BorderForeground(lipgloss.Color("240"))
-
-	boldStyle = lipgloss.NewStyle().Bold(true)
-
-	faintStyle = lipgloss.NewStyle().Faint(true)
-
-	underlineStyle = lipgloss.NewStyle().Underline(true).Foreground(lipgloss.Color("2"))
 )
 
 type NbaClient interface {
@@ -126,12 +106,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 	case BoxScoreMsg:
 		m.boxScore = types.LiveBoxScoreResponse(msg)
 		m.lastUpdated = time.Now()
+
 	case PlayByPlayMsg:
 		m.pbp = types.LivePlayByPlayResponse(msg)
 		m.lastUpdated = time.Now()
+
 	case tea.KeyMsg:
 		team := m.getCurrentTeam()
 		switch msg.String() {
@@ -213,11 +196,11 @@ func (m Model) View() string {
 	awayScore := fmt.Sprintf("%d", game.AwayTeam.Score)
 
 	if game.HomeTeam.Score > game.AwayTeam.Score {
-		homeTricode = boldStyle.Render(homeTricode)
-		homeScore = boldStyle.Render(homeScore)
+		homeTricode = styles.BoldStyle.Render(homeTricode)
+		homeScore = styles.BoldStyle.Render(homeScore)
 	} else if game.AwayTeam.Score > game.HomeTeam.Score {
-		awayTricode = boldStyle.Render(awayTricode)
-		awayScore = boldStyle.Render(awayScore)
+		awayTricode = styles.BoldStyle.Render(awayTricode)
+		awayScore = styles.BoldStyle.Render(awayScore)
 	}
 
 	headerStr := fmt.Sprintf("%s\n%s (%s) | %s (%s)",
@@ -230,7 +213,7 @@ func (m Model) View() string {
 	if headerWidth > 50 {
 		headerWidth = 50
 	}
-	header := borderStyle.Width(headerWidth).Align(lipgloss.Center).Render(headerStr)
+	header := styles.BorderStyle.Width(headerWidth).Align(lipgloss.Center).Render(headerStr)
 
 	// Selected Team Display
 	team := m.getCurrentTeam()
@@ -261,16 +244,16 @@ func (m Model) View() string {
 		glWidth := m.width - bsWidth - 2
 
 		boxScoreContent := m.renderBoxScore(team, bsWidth-2, availableHeight-2)
-		bsStyle := borderStyle
+		bsStyle := styles.BorderStyle
 		if m.focus == boxScoreFocus {
-			bsStyle = activeBorderStyle
+			bsStyle = styles.ActiveBorderStyle
 		}
 		boxScore := bsStyle.Width(bsWidth).Height(availableHeight).Render(boxScoreContent)
 
 		gameLogContent := m.renderGameLog(glWidth-2, availableHeight-2)
-		glStyle := borderStyle
+		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
-			glStyle = activeBorderStyle
+			glStyle = styles.ActiveBorderStyle
 		}
 		gameLog := glStyle.Width(glWidth).Height(availableHeight).Render(gameLogContent)
 
@@ -285,16 +268,16 @@ func (m Model) View() string {
 		}
 
 		boxScoreContent := m.renderBoxScore(team, m.width-2, bsHeight-2)
-		bsStyle := borderStyle
+		bsStyle := styles.BorderStyle
 		if m.focus == boxScoreFocus {
-			bsStyle = activeBorderStyle
+			bsStyle = styles.ActiveBorderStyle
 		}
 		boxScore := bsStyle.Width(m.width - 2).Height(bsHeight).Render(boxScoreContent)
 
 		gameLogContent := m.renderGameLog(m.width-2, glHeight-2)
-		glStyle := borderStyle
+		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
-			glStyle = activeBorderStyle
+			glStyle = styles.ActiveBorderStyle
 		}
 		gameLog := glStyle.Width(m.width - 2).Height(glHeight).Render(gameLogContent)
 
@@ -312,9 +295,9 @@ func (m Model) renderGameLog(width, height int) string {
 	for i, p := range periods {
 		pNum := i + 1
 		if pNum == m.selectedPeriod {
-			selectorParts = append(selectorParts, underlineStyle.Render(p))
+			selectorParts = append(selectorParts, styles.UnderlineStyle.Render(p))
 		} else {
-			selectorParts = append(selectorParts, faintStyle.Render(p))
+			selectorParts = append(selectorParts, styles.FaintStyle.Render(p))
 		}
 	}
 	periodSelectorContent := strings.Join(selectorParts, " | ")
@@ -358,7 +341,7 @@ func (m Model) renderGameLog(width, height int) string {
 
 func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	s := "Box Scores\n"
-	header := tableHeaderStyle.Render(fmt.Sprintf("% -15s % -5s % -3s % -3s % -3s", "PLAYER", "MIN", "PTS", "REB", "AST"))
+	header := styles.TableHeaderStyle.Render(fmt.Sprintf("% -15s % -5s % -3s % -3s % -3s", "PLAYER", "MIN", "PTS", "REB", "AST"))
 	s += header + "\n"
 
 	if team.Players == nil {

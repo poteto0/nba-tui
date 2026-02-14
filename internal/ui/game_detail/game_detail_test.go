@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"github.com/poteto0/go-nba-sdk/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func ptr[T any](v T) *T {
@@ -36,7 +37,7 @@ func TestNew(t *testing.T) {
 	m := New(client, gameID)
 
 	// Check if returns a valid Model (tea.Model)
-	var _ tea.Model = m
+	assert.NotNil(t, m)
 }
 
 func TestInit(t *testing.T) {
@@ -50,58 +51,75 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestUpdate_BoxScore(t *testing.T) {
+func TestUpdate_View(t *testing.T) {
+	// Arrange
 	client := &mockNbaClient{}
 	m := New(client, "123")
 	m.width = 100
 	m.height = 40
 
-	// Create dummy data
-	boxScore := types.LiveBoxScoreResponse{
-		Game: types.Game{
-			GameId:   "123",
-			HomeTeam: types.Team{TeamName: "Lakers", TeamTricode: "LAL"},
-			AwayTeam: types.Team{TeamName: "Warriors", TeamTricode: "GSW"},
-		},
-	}
+	t.Run("update window size", func(t *testing.T) {
+		// Arrange
+		msg := tea.WindowSizeMsg{
+			Width:  200,
+			Height: 80,
+		}
 
-	updatedModel, _ := m.Update(BoxScoreMsg(boxScore))
+		// Act
+		model, _ := m.Update(msg)
 
-	view := updatedModel.View()
-	if !strings.Contains(view, "LAL") || !strings.Contains(view, "GSW") {
-		t.Errorf("View should contain team tricodes after BoxScoreMsg, got: %s", view)
-	}
-}
+		// Assert
+		assert.Equal(t, 200, model.(Model).width)
+		assert.Equal(t, 80, model.(Model).height)
 
-func TestUpdate_PlayByPlay(t *testing.T) {
-	client := &mockNbaClient{}
-	m := New(client, "123")
-	m.width = 100
-	m.height = 40
+		// cleanup
+		m.width = 100
+		m.height = 40
+	})
 
-	// Pre-load BoxScore to bypass Loading screen and set HomeTeam ID
-	boxScore := types.LiveBoxScoreResponse{
-		Game: types.Game{
-			GameId:   "123",
-			HomeTeam: types.Team{TeamId: 10, TeamTricode: "LAL"},
-		},
-	}
-	modelWithBoxScore, _ := m.Update(BoxScoreMsg(boxScore))
-
-	pbp := types.LivePlayByPlayResponse{
-		Game: types.PlayByPlayGame{
-			Actions: []types.Action{
-				{Description: "LeBron James dunk", TeamID: 10, Period: 1},
+	t.Run("update box score view", func(t *testing.T) {
+		// Arrange
+		boxScore := types.LiveBoxScoreResponse{
+			Game: types.Game{
+				GameId:   "123",
+				HomeTeam: types.Team{TeamName: "Lakers", TeamTricode: "LAL"},
+				AwayTeam: types.Team{TeamName: "Warriors", TeamTricode: "GSW"},
 			},
-		},
-	}
+		}
 
-	updatedModel, _ := modelWithBoxScore.Update(PlayByPlayMsg(pbp))
+		// Act
+		updatedModel, _ := m.Update(BoxScoreMsg(boxScore))
 
-	view := updatedModel.View()
-	if !strings.Contains(view, "LeBron James dunk") {
-		t.Errorf("View should contain pbp description, got: %s", view)
-	}
+		view := updatedModel.View()
+		assert.Contains(t, view, "LAL")
+		assert.Contains(t, view, "GSW")
+	})
+
+	t.Run("update playbyplay view", func(t *testing.T) {
+		// Arrange
+		// Pre-load BoxScore to bypass Loading screen and set HomeTeam ID
+		boxScore := types.LiveBoxScoreResponse{
+			Game: types.Game{
+				GameId:   "123",
+				HomeTeam: types.Team{TeamId: 10, TeamTricode: "LAL"},
+			},
+		}
+		modelWithBoxScore, _ := m.Update(BoxScoreMsg(boxScore))
+
+		pbp := types.LivePlayByPlayResponse{
+			Game: types.PlayByPlayGame{
+				Actions: []types.Action{
+					{Description: "LeBron James dunk", TeamID: 10, Period: 1},
+				},
+			},
+		}
+
+		// Act
+		updatedModel, _ := modelWithBoxScore.Update(PlayByPlayMsg(pbp))
+
+		view := updatedModel.View()
+		assert.Contains(t, view, "LeBron James dunk")
+	})
 }
 
 func TestView_Layout(t *testing.T) {
@@ -115,7 +133,7 @@ func TestView_Layout(t *testing.T) {
 	// Set size to avoid "Too small"
 	m.width = 100
 	m.height = 40
-	
+
 	view := m.View()
 	if !strings.Contains(view, "Box Scores") || !strings.Contains(view, "gamelog") {
 		t.Errorf("View should contain layout headers, got: %s", view)
@@ -159,10 +177,10 @@ func TestView_BoxScoreTable(t *testing.T) {
 	m := New(client, "123")
 	m.width = 100
 	m.height = 40
-	
+
 	players := []types.Player{
 		{
-			FirstName: "LeBron",
+			FirstName:  "LeBron",
 			FamilyName: "James",
 			Statistics: &types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
@@ -174,7 +192,7 @@ func TestView_BoxScoreTable(t *testing.T) {
 			},
 		},
 	}
-	
+
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId: "123",
@@ -184,7 +202,7 @@ func TestView_BoxScoreTable(t *testing.T) {
 			},
 		},
 	}
-	
+
 	view := m.View()
 	headers := []string{"PLAYER", "MIN", "PTS", "REB", "AST"}
 	for _, h := range headers {
@@ -192,7 +210,7 @@ func TestView_BoxScoreTable(t *testing.T) {
 			t.Errorf("View should contain table header %s", h)
 		}
 	}
-	
+
 	if !strings.Contains(view, "L.James") {
 		t.Errorf("View should contain player name L.James, got: %s", view)
 	}
@@ -338,7 +356,7 @@ func TestView_GameLogFiltering(t *testing.T) {
 	if strings.Contains(view3, "GSW Action Q1") {
 		t.Errorf("Should NOT contain GSW Action Q1 (filtered by period)")
 	}
-	
+
 	// 4. Check period selector UI
 	// Since 2Q might be styled like \x1b[4m2\x1b[0m\x1b[4mQ\x1b[0m, we check separately
 	if !strings.Contains(view3, "1") || !strings.Contains(view3, "Q") || !strings.Contains(view3, "2") {
