@@ -159,7 +159,8 @@ func TestView_Layout(t *testing.T) {
 		m.width = 50
 		m.height = 10
 		view := m.View()
-		assert.Contains(t, view, "Terminal height too small")
+		assert.Contains(t, view, "Selected Team")
+		assert.Contains(t, view, "move")
 	})
 }
 
