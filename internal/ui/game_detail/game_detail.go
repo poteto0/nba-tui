@@ -199,11 +199,11 @@ func (m Model) View() string {
 	selectedTeamView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
 
 	headerStr := m.renderHeaderStr()
-	headerContentWidth := m.width - 2
-	if headerContentWidth > 48 {
-		headerContentWidth = 48
+	headerTotalWidth := m.width
+	if headerTotalWidth > 50 {
+		headerTotalWidth = 50
 	}
-	headerBox := styles.BorderStyle.Width(headerContentWidth).Align(lipgloss.Center).Render(headerStr)
+	headerBox := styles.BorderStyle.Width(headerTotalWidth).Align(lipgloss.Center).Render(headerStr)
 	headerView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(headerBox)
 
 	// 2. Bottom Section
@@ -221,7 +221,7 @@ func (m Model) View() string {
 	h_header := lipgloss.Height(headerView)
 	h_footer := lipgloss.Height(footerView)
 	
-availableHeight := m.height - h_selected - h_header - h_footer - 1
+	availableHeight := m.height - h_selected - h_header - h_footer - 1
 	if availableHeight < 4 {
 		return lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, headerView, footerView)
 	}
@@ -232,22 +232,28 @@ availableHeight := m.height - h_selected - h_header - h_footer - 1
 		bsWidth := (m.width * 6) / 10
 		glWidth := m.width - bsWidth
 		
-		// Subtract border space (2) for content width and height
-		boxScoreContent := m.renderBoxScore(team, bsWidth-2, availableHeight-2)
+		bsHeight := availableHeight
+		glHeight := availableHeight - 2 // User requested gamelog to be shorter
+		if glHeight < 4 {
+			glHeight = 4
+		}
+
+		boxScoreContent := m.renderBoxScore(team, bsWidth-2, bsHeight-2)
 		bsStyle := styles.BorderStyle
 		if m.focus == boxScoreFocus {
 			bsStyle = styles.ActiveBorderStyle
 		}
-		boxScore := bsStyle.Width(bsWidth - 2).Height(availableHeight - 2).Render(boxScoreContent)
+		boxScore := bsStyle.Width(bsWidth).Height(bsHeight).Render(boxScoreContent)
 
-		gameLogContent := m.renderGameLog(glWidth-2, availableHeight-2)
+		gameLogContent := m.renderGameLog(glWidth-2, glHeight-2)
 		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
 			glStyle = styles.ActiveBorderStyle
 		}
-		gameLog := glStyle.Width(glWidth - 2).Height(availableHeight - 2).Render(gameLogContent)
+		gameLog := glStyle.Width(glWidth).Height(glHeight).Render(gameLogContent)
 
-		mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
+		// Align them at the bottom
+		mainView = lipgloss.JoinHorizontal(lipgloss.Bottom, boxScore, gameLog)
 	} else {
 		// Vertical layout
 		bsHeight := availableHeight / 2
@@ -258,14 +264,14 @@ availableHeight := m.height - h_selected - h_header - h_footer - 1
 		if m.focus == boxScoreFocus {
 			bsStyle = styles.ActiveBorderStyle
 		}
-		boxScore := bsStyle.Width(m.width - 2).Height(bsHeight - 2).Render(boxScoreContent)
+		boxScore := bsStyle.Width(m.width).Height(bsHeight).Render(boxScoreContent)
 
 		gameLogContent := m.renderGameLog(m.width-2, glHeight-2)
 		glStyle := styles.BorderStyle
 		if m.focus == gameLogFocus {
 			glStyle = styles.ActiveBorderStyle
 		}
-		gameLog := glStyle.Width(m.width - 2).Height(glHeight - 2).Render(gameLogContent)
+		gameLog := glStyle.Width(m.width).Height(glHeight).Render(gameLogContent)
 
 		mainView = lipgloss.JoinVertical(lipgloss.Left, boxScore, gameLog)
 	}
