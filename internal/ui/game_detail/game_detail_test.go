@@ -7,10 +7,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/moznion/go-optional"
 	"github.com/muesli/termenv"
 	"github.com/poteto0/go-nba-sdk/types"
 )
+
+func ptr[T any](v T) *T {
+	return &v
+}
 
 // Mock Client
 type mockNbaClient struct {
@@ -50,6 +53,8 @@ func TestInit(t *testing.T) {
 func TestUpdate_BoxScore(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 
 	// Create dummy data
 	boxScore := types.LiveBoxScoreResponse{
@@ -71,6 +76,8 @@ func TestUpdate_BoxScore(t *testing.T) {
 func TestUpdate_PlayByPlay(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 
 	// Pre-load BoxScore to bypass Loading screen and set HomeTeam ID
 	boxScore := types.LiveBoxScoreResponse{
@@ -105,6 +112,9 @@ func TestView_Layout(t *testing.T) {
 			GameId: "123",
 		},
 	}
+	// Set size to avoid "Too small"
+	m.width = 100
+	m.height = 40
 	
 	view := m.View()
 	if !strings.Contains(view, "Box Scores") || !strings.Contains(view, "gamelog") {
@@ -122,6 +132,8 @@ func TestUpdate_SwitchTeam(t *testing.T) {
 			AwayTeam: types.Team{TeamTricode: "GSW"},
 		},
 	}
+	m.width = 100
+	m.height = 40
 
 	// Initial should show LAL and GSW in header
 	view := m.View()
@@ -145,19 +157,21 @@ func TestUpdate_SwitchTeam(t *testing.T) {
 func TestView_BoxScoreTable(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 	
 	players := []types.Player{
 		{
 			FirstName: "LeBron",
 			FamilyName: "James",
-			Statistics: optional.Some(types.PlayerBoxScoreStatistic{
+			Statistics: &types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: optional.Some(30),
-					Reb: optional.Some(10),
-					Ast: optional.Some(10),
+					Minutes: "35:00",
+					Pts:     ptr(30),
+					Reb:     ptr(10),
+					Ast:     ptr(10),
 				},
-				Minutes: optional.Some("35:00"),
-			}),
+			},
 		},
 	}
 	
@@ -166,7 +180,7 @@ func TestView_BoxScoreTable(t *testing.T) {
 			GameId: "123",
 			HomeTeam: types.Team{
 				TeamTricode: "LAL",
-				Players:     optional.Some(players),
+				Players:     &players,
 			},
 		},
 	}
@@ -188,6 +202,8 @@ func TestView_BoldWinner(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId:   "123",
@@ -206,6 +222,8 @@ func TestView_BoldWinner(t *testing.T) {
 func TestView_Footer(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{GameId: "123"},
 	}
@@ -224,6 +242,8 @@ func TestView_Footer(t *testing.T) {
 func TestUpdate_Navigation(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId:   "123",
@@ -255,13 +275,13 @@ func TestUpdate_Navigation(t *testing.T) {
 	}
 
 	// Check Selected Team display
-	view := m.View()
+	view := m3.View()
 	if !strings.Contains(view, "Selected Team: LAL") {
 		t.Errorf("View should show Selected Team: LAL, got: %s", view)
 	}
 
 	// Switch team and check display
-	m4, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m4, _ := m3.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
 	if !strings.Contains(m4.View(), "Selected Team: GSW") {
 		t.Errorf("View should show Selected Team: GSW after switch")
 	}
@@ -271,6 +291,8 @@ func TestView_GameLogFiltering(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 	client := &mockNbaClient{}
 	m := New(client, "123")
+	m.width = 100
+	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId:   "123",

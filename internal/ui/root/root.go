@@ -26,6 +26,8 @@ type Model struct {
 	detailModel     game_detail.Model
 	state           state
 	gameID          string
+	width           int
+	height          int
 }
 
 func NewModel(client Client) Model {
@@ -44,10 +46,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	case scoreboard.SelectGameMsg:
 		m.state = detailView
 		m.gameID = msg.GameId
 		m.detailModel = game_detail.New(m.client, m.gameID)
+		// Initialize with current width/height
+		dm, _ := m.detailModel.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		m.detailModel = dm.(game_detail.Model)
 		return m, m.detailModel.Init()
 
 	case tea.KeyMsg:

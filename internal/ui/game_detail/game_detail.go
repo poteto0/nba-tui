@@ -55,6 +55,8 @@ type Model struct {
 	logOffset      int
 	boxOffset      int
 	selectedPeriod int
+	width          int
+	height         int
 }
 
 func New(client NbaClient, gameID string) Model {
@@ -121,6 +123,9 @@ func (m Model) getCurrentTeam() types.Team {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	case BoxScoreMsg:
 		m.boxScore = types.LiveBoxScoreResponse(msg)
 		m.lastUpdated = time.Now()
@@ -154,8 +159,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Horizontal scroll if needed in future
 		case "j", "down":
 			if m.focus == boxScoreFocus {
-				players, err := team.Players.Take()
-				if err == nil {
+				if team.Players != nil {
+					players := *team.Players
 					if m.boxOffset < len(players)-1 {
 						m.boxOffset++
 					}
@@ -191,6 +196,10 @@ func (m Model) View() string {
 		return "Loading..."
 	}
 
+	if m.width < 20 || m.height < 10 {
+		return "Terminal too small. Please enlarge."
+	}
+
 	// Header: Status and Teams
 	game := m.boxScore.Game
 	status := game.GameStatusText
@@ -216,22 +225,87 @@ func (m Model) View() string {
 		homeTricode, homeScore,
 		awayTricode, awayScore,
 	)
-	header := borderStyle.Width(50).Align(lipgloss.Center).Render(headerStr)
+
+	headerWidth := m.width - 2
+	if headerWidth > 50 {
+		headerWidth = 50
+	}
+	header := borderStyle.Width(headerWidth).Align(lipgloss.Center).Render(headerStr)
 
 	// Selected Team Display
 	team := m.getCurrentTeam()
-	selectedTeamView := fmt.Sprintf("Selected Team: %s", team.TeamTricode)
+	selectedTeamView := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
 
-	// Box Score Section
-	boxScoreContent := m.renderBoxScore(team)
-	bsStyle := borderStyle
-	if m.focus == boxScoreFocus {
-		bsStyle = activeBorderStyle
+	// Calculate heights
+	topHeight := lipgloss.Height(selectedTeamView) + lipgloss.Height(header)
+
+	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+q>: period, <ctrl+w>: watch, <ctrl+c>: quit"
+	var footerText string
+	if !m.lastUpdated.IsZero() {
+		footerText = fmt.Sprintf("Last updated: %s\n%s", m.lastUpdated.Format(time.RFC1123), helpText)
+	} else {
+		footerText = helpText
 	}
-	// Fixed size box score
-	boxScore := bsStyle.Width(50).Height(26).MaxWidth(50).MaxHeight(26).Render(boxScoreContent)
+	footer := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Left).Render(footerText)
+	footerHeight := lipgloss.Height(footer)
 
-	// Game Log Section
+	availableHeight := m.height - topHeight - footerHeight - 2 // -2 for safety/spacing
+	if availableHeight < 5 {
+		return "Terminal height too small. Please enlarge."
+	}
+
+	var mainView string
+	if m.width >= 100 {
+		// Horizontal layout
+		bsWidth := (m.width * 6) / 10
+		glWidth := m.width - bsWidth - 2
+
+		boxScoreContent := m.renderBoxScore(team, bsWidth-2, availableHeight-2)
+		bsStyle := borderStyle
+		if m.focus == boxScoreFocus {
+			bsStyle = activeBorderStyle
+		}
+		boxScore := bsStyle.Width(bsWidth).Height(availableHeight).Render(boxScoreContent)
+
+		gameLogContent := m.renderGameLog(glWidth-2, availableHeight-2)
+		glStyle := borderStyle
+		if m.focus == gameLogFocus {
+			glStyle = activeBorderStyle
+		}
+		gameLog := glStyle.Width(glWidth).Height(availableHeight).Render(gameLogContent)
+
+		mainView = lipgloss.JoinHorizontal(lipgloss.Top, boxScore, gameLog)
+	} else {
+		// Vertical layout
+		bsHeight := availableHeight / 2
+		glHeight := availableHeight - bsHeight
+
+		if bsHeight < 5 || glHeight < 5 {
+			return "Terminal height too small for vertical layout. Please enlarge."
+		}
+
+		boxScoreContent := m.renderBoxScore(team, m.width-2, bsHeight-2)
+		bsStyle := borderStyle
+		if m.focus == boxScoreFocus {
+			bsStyle = activeBorderStyle
+		}
+		boxScore := bsStyle.Width(m.width - 2).Height(bsHeight).Render(boxScoreContent)
+
+		gameLogContent := m.renderGameLog(m.width-2, glHeight-2)
+		glStyle := borderStyle
+		if m.focus == gameLogFocus {
+			glStyle = activeBorderStyle
+		}
+		gameLog := glStyle.Width(m.width - 2).Height(glHeight).Render(gameLogContent)
+
+		mainView = lipgloss.JoinVertical(lipgloss.Left, boxScore, gameLog)
+	}
+
+	rootView := lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, header, mainView, footer)
+	return rootView
+}
+
+func (m Model) renderGameLog(width, height int) string {
 	// Period Selector
 	periods := []string{"1Q", "2Q", "3Q", "4Q"}
 	var selectorParts []string
@@ -244,10 +318,11 @@ func (m Model) View() string {
 		}
 	}
 	periodSelectorContent := strings.Join(selectorParts, " | ")
-	periodSelector := lipgloss.NewStyle().Width(33).Align(lipgloss.Center).Render(periodSelectorContent)
+	periodSelector := lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render(periodSelectorContent)
 
-	gameLogHeader := lipgloss.NewStyle().Width(33).Align(lipgloss.Center).Render("gamelog")
+	gameLogHeader := lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render("gamelog")
 
+	team := m.getCurrentTeam()
 	// Filter actions by team and period
 	var filteredActions []types.Action
 	for _, action := range m.pbp.Game.Actions {
@@ -256,57 +331,48 @@ func (m Model) View() string {
 		}
 	}
 
-	// Create a fixed-height log body (22 lines to fit in Height(26) minus headers)
+	// Calculate body height: total height minus headers
+	bodyHeight := height - lipgloss.Height(gameLogHeader) - lipgloss.Height(periodSelector)
+	if bodyHeight < 1 {
+		return "Too small"
+	}
+
 	var logLines []string
-	for i := 0; i < 22; i++ {
+	for i := 0; i < bodyHeight; i++ {
 		idx := m.logOffset + i
 		if idx < len(filteredActions) {
 			action := filteredActions[idx]
 			desc := action.Description
-			// Truncate to avoid line wrap breaking the layout
-			if len(desc) > 26 {
-				desc = desc[:23] + "..."
+			// Truncate to avoid line wrap
+			clockWidth := 6 // "00:00|"
+			descMaxWidth := width - clockWidth
+			if len(desc) > descMaxWidth && descMaxWidth > 3 {
+				desc = desc[:descMaxWidth-3] + "..."
 			}
 			logLines = append(logLines, fmt.Sprintf("% -5s|%s", action.Clock, desc))
-		} else {
-			logLines = append(logLines, "") // Pad with empty lines
 		}
 	}
 	gameLogBody := strings.Join(logLines, "\n")
-	gameLogContent := gameLogHeader + "\n" + periodSelector + "\n" + gameLogBody
-
-	glStyle := borderStyle
-	if m.focus == gameLogFocus {
-		glStyle = activeBorderStyle
-	}
-	gameLog := glStyle.Width(35).Height(26).MaxWidth(35).MaxHeight(26).Render(gameLogContent)
-
-	leftCol := lipgloss.JoinVertical(lipgloss.Left, header, boxScore)
-	mainView := lipgloss.JoinHorizontal(lipgloss.Top, leftCol, gameLog)
-	rootView := lipgloss.JoinVertical(lipgloss.Left, selectedTeamView, mainView)
-
-	helpText := "<hjkli←↓↑→ >: move, <ctrl+s>: switch team, <ctrl+b>: box, <ctrl+l>: log, <ctrl+w>: watch, <esc>: back"
-	footer := helpText
-	if !m.lastUpdated.IsZero() {
-		footer = fmt.Sprintf("Last updated: %s\n%s", m.lastUpdated.Format(time.RFC1123), helpText)
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, rootView, footer)
+	return gameLogHeader + "\n" + periodSelector + "\n" + gameLogBody
 }
 
-func (m Model) renderBoxScore(team types.Team) string {
+func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	s := "Box Scores\n"
-	s += tableHeaderStyle.Render(fmt.Sprintf("% -15s % -5s % -3s % -3s % -3s", "PLAYER", "MIN", "PTS", "REB", "AST")) + "\n"
+	header := tableHeaderStyle.Render(fmt.Sprintf("% -15s % -5s % -3s % -3s % -3s", "PLAYER", "MIN", "PTS", "REB", "AST"))
+	s += header + "\n"
 
-	players, err := team.Players.Take()
-	if err != nil {
+	if team.Players == nil {
 		return s + "No player data"
 	}
+	players := *team.Players
 
-	// Calculate how many lines we can show in the fixed height
-	// Table takes up 2 lines (Title + Header)
-	// Available is 26 minus borders (2) minus headers (2) = 22 lines.
-	for i := 0; i < 22; i++ {
+	// Available is height minus headers (2 lines)
+	bodyHeight := height - 2
+	if bodyHeight < 1 {
+		return "Too small"
+	}
+
+	for i := 0; i < bodyHeight; i++ {
 		idx := m.boxOffset + i
 		if idx < len(players) {
 			p := players[idx]
@@ -316,21 +382,32 @@ func (m Model) renderBoxScore(team types.Team) string {
 			} else {
 				name = p.FamilyName
 			}
-			stats, err := p.Statistics.Take()
-			if err != nil {
+			if p.Statistics == nil {
 				s += fmt.Sprintf("% -15s -\n", name)
 				continue
 			}
+			stats := *p.Statistics
 
-			min, _ := stats.Minutes.Take()
-			pts, _ := stats.Pts.Take()
-			reb, _ := stats.Reb.Take()
-			ast, _ := stats.Ast.Take()
+			min := stats.Minutes
+			pts := 0
+			if stats.Pts != nil {
+				pts = *stats.Pts
+			}
+			reb := 0
+			if stats.Reb != nil {
+				reb = *stats.Reb
+			}
+			ast := 0
+			if stats.Ast != nil {
+				ast = *stats.Ast
+			}
 
-			s += fmt.Sprintf("% -15s % -5s % -3d % -3d % -3d\n",
+			line := fmt.Sprintf("% -15s % -5s % -3d % -3d % -3d",
 				name, min, pts, reb, ast)
-		} else {
-			s += "\n" // Pad with empty lines
+			if len(line) > width {
+				line = line[:width]
+			}
+			s += line + "\n"
 		}
 	}
 	return s
