@@ -37,10 +37,19 @@ type Model struct {
 	selectedPeriod int
 	width          int
 	height         int
+	OpenBrowser    func(string) error
 }
 
 func New(client NbaClient, gameID string) Model {
-	return Model{client: client, gameID: gameID, showingHome: true, selectedPeriod: 1}
+	return Model{
+		client:         client,
+		gameID:         gameID,
+		showingHome:    true,
+		selectedPeriod: 1,
+		OpenBrowser: func(url string) error {
+			return exec.Command("xdg-open", url).Start()
+		},
+	}
 }
 
 func (m *Model) SetLastUpdated(t time.Time) {
@@ -131,7 +140,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logOffset = 0
 		case "ctrl+w":
 			url := fmt.Sprintf("https://www.nba.com/game/%s", m.gameID)
-			_ = exec.Command("xdg-open", url).Start()
+			if m.OpenBrowser != nil {
+				_ = m.OpenBrowser(url)
+			}
 		case "ctrl+b":
 			m.focus = boxScoreFocus
 		case "ctrl+l":

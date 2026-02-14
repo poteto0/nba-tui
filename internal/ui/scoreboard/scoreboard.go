@@ -41,12 +41,16 @@ type Model struct {
 	Width       int
 	Height      int
 	Columns     int
+	OpenBrowser func(string) error
 }
 
 func NewModel(client ScoreboardProvider) Model {
 	return Model{
 		client:  client,
 		Columns: 1, // Default to 1 column
+		OpenBrowser: func(url string) error {
+			return exec.Command("xdg-open", url).Start()
+		},
 	}
 }
 
@@ -119,7 +123,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.Games) > 0 {
 				game := m.Games[m.Focus]
 				url := fmt.Sprintf("https://www.nba.com/game/%s", game.GameId)
-				_ = exec.Command("xdg-open", url).Start()
+				if m.OpenBrowser != nil {
+					_ = m.OpenBrowser(url)
+				}
 			}
 		case "h", "left":
 			if m.Focus > 0 {

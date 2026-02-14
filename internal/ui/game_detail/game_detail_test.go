@@ -227,6 +227,16 @@ func TestUpdate_KeyEvents(t *testing.T) {
 		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 		assert.NotNil(t, cmd)
 	})
+
+	t.Run("ctrl+w watch key", func(t *testing.T) {
+		var openedURL string
+		m.OpenBrowser = func(url string) error {
+			openedURL = url
+			return nil
+		}
+		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlW})
+		assert.Equal(t, "https://www.nba.com/game/123", openedURL)
+	})
 }
 
 func TestModel_FetchFunctions(t *testing.T) {

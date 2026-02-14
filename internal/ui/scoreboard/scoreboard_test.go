@@ -188,8 +188,16 @@ func TestScoreboardView(t *testing.T) {
 		games := []types.Game{{GameId: "123"}}
 		m := NewModel(&mockClient{games: games})
 		m.Games = games
+
+		var openedURL string
+		m.OpenBrowser = func(url string) error {
+			openedURL = url
+			return nil
+		}
+
 		_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlW})
-		assert.Nil(t, cmd) // exec.Command().Start() returns nil cmd in tea
+		assert.Nil(t, cmd)
+		assert.Equal(t, "https://www.nba.com/game/123", openedURL)
 	})
 
 	t.Run("renders away team winner", func(t *testing.T) {
