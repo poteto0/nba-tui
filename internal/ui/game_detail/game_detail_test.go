@@ -332,7 +332,7 @@ func TestUpdate_SwitchTeam(t *testing.T) {
 func TestView_BoxScoreTable(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
-	m.width = 100
+	m.width = 200
 	m.height = 40
 
 	players := []types.Player{

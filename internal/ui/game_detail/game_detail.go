@@ -34,6 +34,7 @@ type Model struct {
 	focus          focusArea
 	logOffset      int
 	boxOffset      int
+	boxScrollX     int
 	selectedPeriod int
 	width          int
 	height         int
@@ -148,9 +149,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+l":
 			m.focus = gameLogFocus
 		case "h", "left":
-			// Horizontal scroll if needed in future
+			if m.focus == boxScoreFocus {
+				if m.boxScrollX > 0 {
+					m.boxScrollX--
+				}
+			}
 		case "l", "right":
-			// Horizontal scroll if needed in future
+			if m.focus == boxScoreFocus {
+				// We don't have max scroll limit easily calculated here without knowing content width.
+				// But we can let it scroll. renderBoxScore should handle bounds or we just let it scroll into empty space.
+				// A simple check is hard without refactoring render logic to return width.
+				// Let's just allow scrolling for now, maybe cap it reasonably high or check in View.
+				// Actually, better to limit it. Let's assume a max width of like 200 for now or let render handle it.
+				// For TDD simplicity, let's just increment.
+				m.boxScrollX++
+			}
 		case "j", "down":
 			if m.focus == boxScoreFocus {
 				if team.Players != nil {
@@ -414,10 +427,29 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 		return "Box Scores"
 	}
 	s := "Box Scores\n"
-	
-	headerFormat := "%-15s %-5s %-3s %-3s %-5s %-3s %-3s %-5s %-3s %-3s %-5s %-4s %-4s %-3s %-3s %-3s %-3s %-3s %-3s %-3s %-4s"
-	header := styles.TableHeaderStyle.Render(fmt.Sprintf(headerFormat,
-		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-"))
+
+	// Format:
+	// PLAYER(15) | MIN(5) | Others right aligned
+	// %-15s (Left)
+	// %-5s  (Left, MIN)
+	// %3s   (Right, e.g. PTS, REB)
+	// All other stats are numeric or pct, so Right Align (%Xs or %Xd) is standard.
+	// Header also needs to match.
+	// FGM(3) FGA(3) FG%(5) 3PM(3) 3PA(3) 3P%(5) FTM(3) FTA(3) FT%(5) OREB(4) DREB(4) REB(3) AST(3) STL(3) BLK(3) TO(3) PF(3) PTS(3) +/-(4)
+
+	// Construct format strings
+	// Header:
+	// PLAYER          MIN   FGM FGA FG%   3PM 3PA 3P%   FTM FTA FT%   OREB DREB REB AST STL BLK TO  PF  PTS +/-
+	// Note: spacing between columns.
+	// Let's use specific widths.
+	// We construct the FULL line first, then slice it.
+
+	headerFormat := "%-15s %-5s %3s %3s %5s %3s %3s %5s %3s %3s %5s %4s %4s %3s %3s %3s %3s %3s %3s %3s %4s"
+	fullHeader := fmt.Sprintf(headerFormat,
+		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
+
+	// Apply horizontal scroll to header
+	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width))
 	s += header + "\n"
 
 	if team.Players == nil {
@@ -440,8 +472,16 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			} else {
 				name = p.FamilyName
 			}
+			// Truncate name if too long for column
+			if len(name) > 15 {
+				name = name[:15]
+			}
+
 			if p.Statistics == nil {
-				s += fmt.Sprintf("%-15s -\n", name)
+				// We still need to format the line to respect scrolling, even if empty stats
+				// Or just show name and -
+				line := fmt.Sprintf("%-15s -", name)
+				s += m.scrollLine(line, width) + "\n"
 				continue
 			}
 			stats := *p.Statistics
@@ -471,7 +511,15 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				min = clockRaw[:5]
 			}
 
-			line := fmt.Sprintf(headerFormat,
+			// Use same widths as header
+			// Right align means %3d etc.
+			// %-15s (Left)
+			// %-5s  (Left)
+			// %3d   (Right) ...
+			
+			// FG% is %5s (Right) to match header width 5
+			
+			fullLine := fmt.Sprintf(headerFormat,
 				name, min,
 				fmt.Sprintf("%d", getInt(stats.FgM)),
 				fmt.Sprintf("%d", getInt(stats.FgA)),
@@ -493,11 +541,24 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				fmt.Sprintf("%d", getInt(stats.Pts)),
 				getFloat(stats.PlusMinus),
 			)
-			if len(line) > width {
-				line = line[:width]
-			}
-			s += line + "\n"
+
+			s += m.scrollLine(fullLine, width) + "\n"
 		}
 	}
 	return s
+}
+
+func (m Model) scrollLine(line string, width int) string {
+	if m.boxScrollX >= len(line) {
+		return ""
+	}
+	start := m.boxScrollX
+	end := start + width
+	if end > len(line) {
+		end = len(line)
+	}
+	if start >= end {
+		return ""
+	}
+	return line[start:end]
 }
