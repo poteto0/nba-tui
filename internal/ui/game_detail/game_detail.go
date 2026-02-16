@@ -293,9 +293,27 @@ func (m Model) View() string {
 
 func (m Model) renderHeaderStr() string {
 	game := m.boxScore.Game
-	status := game.GameStatusText
-	if !game.IsFinished() {
-		status = fmt.Sprintf("%dQ (%s)", game.Period, game.GameClock)
+	var status string
+	
+	if !game.IsGameStart() {
+		status = "not started"
+	} else if game.IsFinished() {
+		status = game.GameStatusText
+	} else {
+		// In-progress
+		periodStr := fmt.Sprintf("%dQ", game.Period)
+		if game.IsOverTime() {
+			periodStr = fmt.Sprintf("%dOT", game.OverTimeNum())
+		}
+		
+		clock := game.Clock()
+		if len(clock) > 5 {
+			clock = clock[:5]
+		} else {
+			clock = "-"
+		}
+		
+		status = fmt.Sprintf("%s (%s)", periodStr, clock)
 	}
 
 	homeTricode := game.HomeTeam.TeamTricode
@@ -396,7 +414,10 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 		return "Box Scores"
 	}
 	s := "Box Scores\n"
-	header := styles.TableHeaderStyle.Render(fmt.Sprintf("% -15s % -5s % -3s % -3s % -3s", "PLAYER", "MIN", "PTS", "REB", "AST"))
+	
+	headerFormat := "%-15s %-5s %-3s %-3s %-5s %-3s %-3s %-5s %-3s %-3s %-5s %-4s %-4s %-3s %-3s %-3s %-3s %-3s %-3s %-3s %-4s"
+	header := styles.TableHeaderStyle.Render(fmt.Sprintf(headerFormat,
+		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-"))
 	s += header + "\n"
 
 	if team.Players == nil {
@@ -420,27 +441,58 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				name = p.FamilyName
 			}
 			if p.Statistics == nil {
-				s += fmt.Sprintf("% -15s -\n", name)
+				s += fmt.Sprintf("%-15s -\n", name)
 				continue
 			}
 			stats := *p.Statistics
 
-			min := stats.Minutes
-			pts := 0
-			if stats.Pts != nil {
-				pts = *stats.Pts
+			getInt := func(i *int) int {
+				if i == nil {
+					return 0
+				}
+				return *i
 			}
-			reb := 0
-			if stats.Reb != nil {
-				reb = *stats.Reb
+			getPct := func(f *float64) string {
+				if f == nil {
+					return "0.0"
+				}
+				return fmt.Sprintf("%.1f", *f*100)
 			}
-			ast := 0
-			if stats.Ast != nil {
-				ast = *stats.Ast
+			getFloat := func(f *float64) string {
+				if f == nil {
+					return "0"
+				}
+				return fmt.Sprintf("%.0f", *f)
 			}
 
-			line := fmt.Sprintf("% -15s % -5s % -3d % -3d % -3d",
-				name, min, pts, reb, ast)
+			clockRaw := stats.MinutesClock()
+			min := "-"
+			if len(clockRaw) > 5 {
+				min = clockRaw[:5]
+			}
+
+			line := fmt.Sprintf(headerFormat,
+				name, min,
+				fmt.Sprintf("%d", getInt(stats.FgM)),
+				fmt.Sprintf("%d", getInt(stats.FgA)),
+				getPct(stats.FgPct),
+				fmt.Sprintf("%d", getInt(stats.Fg3M)),
+				fmt.Sprintf("%d", getInt(stats.Fg3A)),
+				getPct(stats.Fg3Pct),
+				fmt.Sprintf("%d", getInt(stats.FtM)),
+				fmt.Sprintf("%d", getInt(stats.FtA)),
+				getPct(stats.FtPct),
+				fmt.Sprintf("%d", getInt(stats.OReb)),
+				fmt.Sprintf("%d", getInt(stats.DReb)),
+				fmt.Sprintf("%d", getInt(stats.Reb)),
+				fmt.Sprintf("%d", getInt(stats.Ast)),
+				fmt.Sprintf("%d", getInt(stats.Stl)),
+				fmt.Sprintf("%d", getInt(stats.Blk)),
+				fmt.Sprintf("%d", getInt(stats.Tov)),
+				fmt.Sprintf("%d", getInt(stats.PF)),
+				fmt.Sprintf("%d", getInt(stats.Pts)),
+				getFloat(stats.PlusMinus),
+			)
 			if len(line) > width {
 				line = line[:width]
 			}
