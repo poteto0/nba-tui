@@ -507,22 +507,22 @@ func TestView_GameLogFiltering(t *testing.T) {
 func TestModel_GettersAndSetters(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
-	
+
 	m.showingHome = false
 	assert.False(t, m.IsShowingHome())
-	
+
 	m.focus = gameLogFocus
 	assert.Equal(t, int(gameLogFocus), m.GetFocus())
-	
+
 	m.logOffset = 5
 	assert.Equal(t, 5, m.GetLogOffset())
-	
+
 	m.boxOffset = 10
 	assert.Equal(t, 10, m.GetBoxOffset())
-	
+
 	m.selectedPeriod = 3
 	assert.Equal(t, 3, m.GetSelectedPeriod())
-	
+
 	now := time.Now()
 	m.SetLastUpdated(now)
 	assert.Equal(t, now, m.lastUpdated)
@@ -532,30 +532,30 @@ func TestUpdate_KeyEvents_Boundaries(t *testing.T) {
 	client := &mockNbaClient{}
 	m := New(client, "123")
 	m.boxScore.Game.HomeTeam.Players = &[]types.Player{{FamilyName: "P1"}}
-	
+
 	t.Run("boxscore boundaries", func(t *testing.T) {
 		m.focus = boxScoreFocus
 		m.boxOffset = 0
 		// Up at 0
 		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
 		assert.Equal(t, 0, model.(Model).boxOffset)
-		
+
 		// Down at end (only 1 player)
 		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 		assert.Equal(t, 0, model.(Model).boxOffset)
 	})
-	
+
 	t.Run("gamelog boundaries", func(t *testing.T) {
 		m.focus = gameLogFocus
 		m.logOffset = 0
 		m.pbp.Game.Actions = []types.Action{{Period: 1, TeamID: 0, Description: "A1"}}
 		m.boxScore.Game.HomeTeam.TeamId = 0
 		m.selectedPeriod = 1
-		
+
 		// Up at 0
 		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
 		assert.Equal(t, 0, model.(Model).logOffset)
-		
+
 		// Down at end
 		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 		assert.Equal(t, 0, model.(Model).logOffset)

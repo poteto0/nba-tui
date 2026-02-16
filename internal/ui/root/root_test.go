@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"nba-tui/internal/ui/game_detail"
-	"nba-tui/internal/ui/scoreboard"
 	"github.com/poteto0/go-nba-sdk/types"
 	"github.com/stretchr/testify/assert"
+	"nba-tui/internal/ui/game_detail"
+	"nba-tui/internal/ui/scoreboard"
 )
 
 type mockClient struct{}
@@ -45,19 +45,13 @@ func TestRootModel_BackToScoreboard(t *testing.T) {
 
 	m.state = detailView
 
-
-
 	// Pressing 'esc' in detail view should go back to scoreboard
 
 	updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 
 	rootM := updatedModel.(Model)
 
-
-
 	assert.Equal(t, scoreboardView, rootM.state)
-
-
 
 	// Test backspace too
 
@@ -71,21 +65,15 @@ func TestRootModel_BackToScoreboard(t *testing.T) {
 
 }
 
-
-
 func TestRootModel_WindowSize(t *testing.T) {
 
 	client := &mockClient{}
 
 	m := NewModel(client)
 
-
-
 	updatedModel, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
 
 	rootM := updatedModel.(Model)
-
-
 
 	assert.Equal(t, 100, rootM.width)
 
@@ -93,15 +81,11 @@ func TestRootModel_WindowSize(t *testing.T) {
 
 }
 
-
-
 func TestRootModel_View(t *testing.T) {
 
 	client := &mockClient{}
 
 	m := NewModel(client)
-
-
 
 	// Scoreboard view
 
@@ -110,8 +94,6 @@ func TestRootModel_View(t *testing.T) {
 	view := m.View()
 
 	assert.Contains(t, view, "Loading") // scoreboard initial view with no games
-
-
 
 	// Detail view
 
@@ -125,8 +107,6 @@ func TestRootModel_View(t *testing.T) {
 
 }
 
-
-
 func TestRootModel_Init(t *testing.T) {
 
 	client := &mockClient{}
@@ -139,15 +119,11 @@ func TestRootModel_Init(t *testing.T) {
 
 }
 
-
-
 func TestRootModel_UpdateDelegation(t *testing.T) {
 
 	client := &mockClient{}
 
 	m := NewModel(client)
-
-
 
 	// Test delegation to scoreboard
 
@@ -160,8 +136,6 @@ func TestRootModel_UpdateDelegation(t *testing.T) {
 	rootM := updatedModel.(Model)
 
 	assert.Equal(t, 0, rootM.scoreboardModel.Focus) // No games, so focus stays 0
-
-
 
 	// Test delegation to detail
 

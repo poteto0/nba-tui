@@ -2,9 +2,9 @@ package root
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/poteto0/go-nba-sdk/types"
 	"nba-tui/internal/ui/game_detail"
 	"nba-tui/internal/ui/scoreboard"
-	"github.com/poteto0/go-nba-sdk/types"
 )
 
 type state int

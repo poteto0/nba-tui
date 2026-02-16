@@ -208,8 +208,8 @@ func (m Model) View() string {
 	// 2. Allocate remaining height based on ratios
 	// Available for Header + Main
 	h_available := m.height - h_selected - h_footer
-	
-h_unit := h_available / 9 // 1 (header) + 8 (main)
+
+	h_unit := h_available / 9 // 1 (header) + 8 (main)
 	if h_unit < 1 {
 		h_unit = 1
 	}
