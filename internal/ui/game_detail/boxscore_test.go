@@ -272,3 +272,38 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 	newModel, _ = mEnd.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
 	// Should change back towards view1
 }
+
+func TestBoxScoreHorizontalScrollingBoundary(t *testing.T) {
+	client := &mockNbaClient{}
+	m := New(client, "123")
+	
+	m.width = 40 
+	m.height = 40
+	m.focus = boxScoreFocus
+
+	players := []types.Player{
+		{
+			FamilyName: "Boundary",
+			Statistics: &types.PlayerBoxScoreStatistic{},
+		},
+	}
+	m.boxScore = types.LiveBoxScoreResponse{
+		Game: types.Game{
+			GameId:   "123",
+			HomeTeam: types.Team{TeamTricode: "LAL", Players: &players},
+		},
+	}
+
+	// Scroll right many times
+	newModel := tea.Model(m)
+	for i := 0; i < 500; i++ {
+		newModel, _ = newModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	}
+	
+	mEnd := newModel.(Model)
+	
+	// Scroll right one more time
+	mOver, _ := mEnd.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	
+	assert.Equal(t, mEnd.boxScrollX, mOver.(Model).boxScrollX, "Should not scroll past the end of the line")
+}

@@ -156,13 +156,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "l", "right":
 			if m.focus == boxScoreFocus {
-				// We don't have max scroll limit easily calculated here without knowing content width.
-				// But we can let it scroll. renderBoxScore should handle bounds or we just let it scroll into empty space.
-				// A simple check is hard without refactoring render logic to return width.
-				// Let's just allow scrolling for now, maybe cap it reasonably high or check in View.
-				// Actually, better to limit it. Let's assume a max width of like 200 for now or let render handle it.
-				// For TDD simplicity, let's just increment.
-				m.boxScrollX++
+				headerFormat := "%-15s %-5s %3s %3s %5s %3s %3s %5s %3s %3s %5s %4s %4s %3s %3s %3s %3s %3s %3s %3s %4s"
+				fullHeader := fmt.Sprintf(headerFormat,
+					"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
+				
+				w_boxscore := (m.width * 6) / 10
+				if m.width < 100 {
+					w_boxscore = m.width
+				}
+				contentWidth := w_boxscore - 2
+				
+				maxScroll := len(fullHeader) - contentWidth
+				if maxScroll < 0 {
+					maxScroll = 0
+				}
+				
+				if m.boxScrollX < maxScroll {
+					m.boxScrollX++
+				}
 			}
 		case "j", "down":
 			if m.focus == boxScoreFocus {
