@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -11,7 +12,16 @@ import (
 )
 
 func main() {
-	client := nba.NewClient()
+	mock := flag.Bool("mock", false, "Use mock data for testing")
+	flag.Parse()
+
+	var client root.Client
+	if *mock {
+		client = nba.NewMockClient()
+	} else {
+		client = nba.NewClient()
+	}
+
 	m := root.NewModel(client)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
