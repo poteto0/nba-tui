@@ -267,6 +267,7 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 	// And ideally, checking that we can see something that was hidden.
 	
 	assert.NotEqual(t, view1, viewEnd, "View should change after scrolling right")
+	assert.Contains(t, viewEnd, "Scroller", "Player name should still be visible after horizontal scrolling")
 	
 	// 3. Scroll Left (h)
 	newModel, _ = mEnd.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})

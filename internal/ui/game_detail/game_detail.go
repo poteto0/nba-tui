@@ -460,7 +460,7 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
 
 	// Apply horizontal scroll to header
-	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width))
+	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width, 16))
 	s += header + "\n"
 
 	if team.Players == nil {
@@ -492,7 +492,7 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				// We still need to format the line to respect scrolling, even if empty stats
 				// Or just show name and -
 				line := fmt.Sprintf("%-15s -", name)
-				s += m.scrollLine(line, width) + "\n"
+				s += m.scrollLine(line, width, 16) + "\n"
 				continue
 			}
 			stats := *p.Statistics
@@ -553,23 +553,34 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				getFloat(stats.PlusMinus),
 			)
 
-			s += m.scrollLine(fullLine, width) + "\n"
+			s += m.scrollLine(fullLine, width, 16) + "\n"
 		}
 	}
 	return s
 }
 
-func (m Model) scrollLine(line string, width int) string {
-	if m.boxScrollX >= len(line) {
-		return ""
+func (m Model) scrollLine(line string, width int, fixedWidth int) string {
+	if len(line) <= fixedWidth {
+		return line
 	}
+	
+	fixed := line[:fixedWidth]
+	scrollable := line[fixedWidth:]
+	
+	if m.boxScrollX >= len(scrollable) {
+		return fixed
+	}
+	
+	remainingWidth := width - fixedWidth
+	if remainingWidth <= 0 {
+		return fixed[:width]
+	}
+	
 	start := m.boxScrollX
-	end := start + width
-	if end > len(line) {
-		end = len(line)
+	end := start + remainingWidth
+	if end > len(scrollable) {
+		end = len(scrollable)
 	}
-	if start >= end {
-		return ""
-	}
-	return line[start:end]
+	
+	return fixed + scrollable[start:end]
 }
