@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"nba-tui/internal/nba"
+	"nba-tui/internal/ui/game_detail"
 	"nba-tui/internal/ui/root"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +14,7 @@ import (
 
 func main() {
 	mock := flag.Bool("mock", false, "Use mock data for testing")
+	noDeco := flag.Bool("no-decoration", false, "Disable color decorations")
 	flag.Parse()
 
 	var client root.Client
@@ -22,7 +24,10 @@ func main() {
 		client = nba.NewClient()
 	}
 
-	m := root.NewModel(client)
+	config := game_detail.Config{
+		NoDecoration: *noDeco,
+	}
+	m := root.NewModel(client, config)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

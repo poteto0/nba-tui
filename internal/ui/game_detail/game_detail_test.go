@@ -41,7 +41,7 @@ func (m *mockNbaClient) GetPlayByPlay(gameID string) (types.LivePlayByPlayRespon
 func TestNew(t *testing.T) {
 	client := &mockNbaClient{}
 	gameID := "12345"
-	m := New(client, gameID)
+	m := New(client, gameID, Config{})
 
 	// Check if returns a valid Model (tea.Model)
 	assert.NotNil(t, m)
@@ -50,7 +50,7 @@ func TestNew(t *testing.T) {
 func TestInit(t *testing.T) {
 	client := &mockNbaClient{}
 	gameID := "12345"
-	m := New(client, gameID)
+	m := New(client, gameID, Config{})
 
 	cmd := m.Init()
 	if cmd == nil {
@@ -61,7 +61,7 @@ func TestInit(t *testing.T) {
 func TestUpdate_View(t *testing.T) {
 	// Arrange
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 
@@ -131,7 +131,7 @@ func TestUpdate_View(t *testing.T) {
 
 func TestView_Layout(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId: "123",
@@ -172,7 +172,7 @@ func TestView_Layout(t *testing.T) {
 
 func TestUpdate_KeyEvents(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -248,7 +248,7 @@ func TestUpdate_KeyEvents(t *testing.T) {
 
 func TestModel_FetchFunctions(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 
 	t.Run("fetch box score success", func(t *testing.T) {
 		msg := m.fetchBoxScore()
@@ -275,7 +275,7 @@ func TestModel_FetchFunctions(t *testing.T) {
 
 func TestView_RenderEdgeCases(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 
@@ -299,7 +299,7 @@ func TestView_RenderEdgeCases(t *testing.T) {
 }
 func TestUpdate_SwitchTeam(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.boxScore = types.LiveBoxScoreResponse{
 		Game: types.Game{
 			GameId:   "123",
@@ -331,7 +331,7 @@ func TestUpdate_SwitchTeam(t *testing.T) {
 
 func TestView_BoxScoreTable(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 200
 	m.height = 40
 
@@ -376,7 +376,7 @@ func TestView_BoxScoreTable(t *testing.T) {
 func TestView_BoldWinner(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -396,7 +396,7 @@ func TestView_BoldWinner(t *testing.T) {
 
 func TestView_Footer(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -416,7 +416,7 @@ func TestView_Footer(t *testing.T) {
 
 func TestUpdate_Navigation(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -461,7 +461,7 @@ func TestUpdate_Navigation(t *testing.T) {
 func TestView_GameLogFiltering(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -506,7 +506,7 @@ func TestView_GameLogFiltering(t *testing.T) {
 
 func TestModel_GettersAndSetters(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 
 	m.showingHome = false
 	assert.False(t, m.IsShowingHome())
@@ -530,7 +530,7 @@ func TestModel_GettersAndSetters(t *testing.T) {
 
 func TestUpdate_KeyEvents_Boundaries(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.boxScore.Game.HomeTeam.Players = &[]types.Player{{FamilyName: "P1"}}
 
 	t.Run("boxscore boundaries", func(t *testing.T) {

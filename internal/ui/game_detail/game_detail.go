@@ -24,6 +24,10 @@ type NbaClient interface {
 	GetPlayByPlay(gameID string) (types.LivePlayByPlayResponse, error)
 }
 
+type Config struct {
+	NoDecoration bool
+}
+
 type Model struct {
 	client         NbaClient
 	gameID         string
@@ -39,9 +43,10 @@ type Model struct {
 	width          int
 	height         int
 	OpenBrowser    func(string) error
+	config         Config
 }
 
-func New(client NbaClient, gameID string) Model {
+func New(client NbaClient, gameID string, config Config) Model {
 	return Model{
 		client:         client,
 		gameID:         gameID,
@@ -50,6 +55,7 @@ func New(client NbaClient, gameID string) Model {
 		OpenBrowser: func(url string) error {
 			return exec.Command("xdg-open", url).Start()
 		},
+		config: config,
 	}
 }
 
@@ -453,6 +459,23 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	}
 	players := *team.Players
 
+	// Calculate team highs
+	maxPts, maxReb, maxAst := -1, -1, -1
+	for _, p := range players {
+		if p.Statistics != nil {
+			stats := *p.Statistics
+			if stats.Pts != nil && *stats.Pts > maxPts {
+				maxPts = *stats.Pts
+			}
+			if stats.Reb != nil && *stats.Reb > maxReb {
+				maxReb = *stats.Reb
+			}
+			if stats.Ast != nil && *stats.Ast > maxAst {
+				maxAst = *stats.Ast
+			}
+		}
+	}
+
 	// Reserve space for Total row (Separator + Stats) if available
 	hasTeamStats := team.Statistics != nil
 	reservedBottom := 0
@@ -512,6 +535,31 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				min = clockRaw[:5]
 			}
 
+			ptsStr := fmt.Sprintf("%d", getInt(stats.Pts))
+			rebStr := fmt.Sprintf("%d", getInt(stats.Reb))
+			astStr := fmt.Sprintf("%d", getInt(stats.Ast))
+			pmStr := getFloat(stats.PlusMinus)
+
+			if !m.config.NoDecoration {
+				if stats.Pts != nil && *stats.Pts == maxPts && maxPts > 0 {
+					ptsStr = styles.BoldStyle.Render(ptsStr)
+				}
+				if stats.Reb != nil && *stats.Reb == maxReb && maxReb > 0 {
+					rebStr = styles.BoldStyle.Render(rebStr)
+				}
+				if stats.Ast != nil && *stats.Ast == maxAst && maxAst > 0 {
+					astStr = styles.BoldStyle.Render(astStr)
+				}
+
+				if stats.PlusMinus != nil {
+					if *stats.PlusMinus > 0 {
+						pmStr = styles.GreenStyle.Render(pmStr)
+					} else if *stats.PlusMinus < 0 {
+						pmStr = styles.RedStyle.Render(pmStr)
+					}
+				}
+			}
+
 			fullLine := fmt.Sprintf(headerFormat,
 				name, min,
 				fmt.Sprintf("%d", getInt(stats.FgM)),
@@ -525,14 +573,14 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				getPct(stats.FtPct),
 				fmt.Sprintf("%d", getInt(stats.OReb)),
 				fmt.Sprintf("%d", getInt(stats.DReb)),
-				fmt.Sprintf("%d", getInt(stats.Reb)),
-				fmt.Sprintf("%d", getInt(stats.Ast)),
+				rebStr,
+				astStr,
 				fmt.Sprintf("%d", getInt(stats.Stl)),
 				fmt.Sprintf("%d", getInt(stats.Blk)),
 				fmt.Sprintf("%d", getInt(stats.Tov)),
 				fmt.Sprintf("%d", getInt(stats.PF)),
-				fmt.Sprintf("%d", getInt(stats.Pts)),
-				getFloat(stats.PlusMinus),
+				ptsStr,
+				pmStr,
 			)
 
 			s += m.scrollLine(fullLine, width) + "\n"

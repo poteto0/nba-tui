@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/poteto0/go-nba-sdk/types"
 	"github.com/stretchr/testify/assert"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestBoxScoreHeader(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 200
 	m.height = 40
 	m.boxScore = types.LiveBoxScoreResponse{
@@ -38,7 +38,7 @@ func TestBoxScoreHeader(t *testing.T) {
 
 func TestMinutesFormatting(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 
@@ -59,7 +59,7 @@ func TestMinutesFormatting(t *testing.T) {
 				HomeTeam: types.Team{TeamTricode: "LAL", Players: &players},
 			},
 		}
-		
+
 		view := m.View()
 		assert.Contains(t, view, "36:10", "Should truncate '36:10.01' to '36:10'")
 	})
@@ -81,7 +81,7 @@ func TestMinutesFormatting(t *testing.T) {
 				HomeTeam: types.Team{TeamTricode: "LAL", Players: &players},
 			},
 		}
-		
+
 		view := m.View()
 		assert.NotContains(t, view, "0:00")
 	})
@@ -89,7 +89,7 @@ func TestMinutesFormatting(t *testing.T) {
 
 func TestGameStatusFormatting(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 100
 	m.height = 40
 
@@ -97,12 +97,12 @@ func TestGameStatusFormatting(t *testing.T) {
 		m.boxScore = types.LiveBoxScoreResponse{
 			Game: types.Game{
 				GameId:     "123",
-				GameStatus: 1, 
-				HomeTeam: types.Team{TeamTricode: "LAL"},
-				AwayTeam: types.Team{TeamTricode: "GSW"},
+				GameStatus: 1,
+				HomeTeam:   types.Team{TeamTricode: "LAL"},
+				AwayTeam:   types.Team{TeamTricode: "GSW"},
 			},
 		}
-		
+
 		view := m.View()
 		assert.Contains(t, view, "not started")
 	})
@@ -114,11 +114,11 @@ func TestGameStatusFormatting(t *testing.T) {
 				GameStatus: 2,
 				Period:     5,
 				GameClock:  "PT05M00.00S",
-				HomeTeam: types.Team{TeamTricode: "LAL"},
-				AwayTeam: types.Team{TeamTricode: "GSW"},
+				HomeTeam:   types.Team{TeamTricode: "LAL"},
+				AwayTeam:   types.Team{TeamTricode: "GSW"},
 			},
 		}
-		
+
 		view := m.View()
 		assert.Contains(t, view, "1OT")
 		assert.NotContains(t, view, "5Q")
@@ -131,11 +131,11 @@ func TestGameStatusFormatting(t *testing.T) {
 				GameStatus: 2,
 				Period:     6,
 				GameClock:  "PT05M00.00S",
-				HomeTeam: types.Team{TeamTricode: "LAL"},
-				AwayTeam: types.Team{TeamTricode: "GSW"},
+				HomeTeam:   types.Team{TeamTricode: "LAL"},
+				AwayTeam:   types.Team{TeamTricode: "GSW"},
 			},
 		}
-		
+
 		view := m.View()
 		assert.Contains(t, view, "2OT")
 		assert.NotContains(t, view, "6Q")
@@ -144,20 +144,20 @@ func TestGameStatusFormatting(t *testing.T) {
 
 func TestBoxScoreAlignment(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 200 // Wide enough to avoid truncation
 	m.height = 40
 
 	pts := 9
-	reb := 123 
+	reb := 123
 	players := []types.Player{
 		{
 			FamilyName: "AlignCheck",
 			Statistics: &types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
 					Minutes: "PT10M00.00S",
-					Pts: &pts,
-					Reb: &reb,
+					Pts:     &pts,
+					Reb:     &reb,
 				},
 			},
 		},
@@ -185,31 +185,31 @@ func TestBoxScoreAlignment(t *testing.T) {
 	// We expect right alignment for stats.
 	// Previous implementation used %-3d (left align). 9 -> "9  "
 	// New requirement: %3d (right align). 9 -> "  9"
-	
+
 	// Let's assume PTS is around index 25-30.
 	// We can check if "9  " exists vs "  9"
 	// But simply checking strict equality of the format string part is hard without full line knowledge.
 	// However, we can check that for a single digit number in a 3-char column, it starts with spaces.
-	
-	// Let's create a regex or check index? 
+
+	// Let's create a regex or check index?
 	// Easier: Just check if we find "  9" in the line, and NOT "9  ".
 	// Assuming 9 is unique enough in this line.
 	// "9" is the PTS value.
-	
+
 	// Wait, Minutes is 10:00 (5 chars).
 	// Player name AlignCheck (10 chars).
 	// So "AlignCheck      10:00   9" vs "AlignCheck      10:00 9  "
-	
+
 	assert.Contains(t, statLine, "  9", "Stat '9' should be right aligned (preceded by spaces)")
 	// assert.NotContains(t, statLine, "9  ", "Stat '9' should NOT be left aligned (followed by spaces)")
 }
 
 func TestBoxScoreHorizontalScrolling(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
-	
+	m := New(client, "123", Config{})
+
 	// Force a small width so content truncates
-	m.width = 40 
+	m.width = 40
 	m.height = 40
 	m.focus = boxScoreFocus
 
@@ -221,7 +221,7 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 			Statistics: &types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
 					Minutes: "PT10M00.00S",
-					Pts: &pts,
+					Pts:     &pts,
 				},
 			},
 		},
@@ -246,11 +246,11 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 	// We need to implement 'h'/'l' support in Update
 	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
 	m2 := newModel.(Model)
-	
-	// We expect the view to shift. 
+
+	// We expect the view to shift.
 	// If we scroll enough, "Scroller" (at the start) might disappear or move left.
 	// Or simply, we see new content.
-	
+
 	// Let's simulate multiple scrolls to move significantly
 	for i := 0; i < 20; i++ {
 		newModel, _ = m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
@@ -258,17 +258,17 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 	}
 	mEnd := m2
 	viewEnd := mEnd.View()
-	
+
 	// Now we might see the end of the table
 	// Depending on implementation, maybe +/- becomes visible
 	// OR the left side "Scroller" becomes hidden
-	
+
 	// Since we don't know exact chars, checking that viewEnd != view1 is a start
 	// And ideally, checking that we can see something that was hidden.
-	
+
 	assert.NotEqual(t, view1, viewEnd, "View should change after scrolling right")
 	assert.Contains(t, viewEnd, "Scroller", "Player name should still be visible after horizontal scrolling")
-	
+
 	// 3. Scroll Left (h)
 	newModel, _ = mEnd.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
 	// Should change back towards view1
@@ -276,9 +276,9 @@ func TestBoxScoreHorizontalScrolling(t *testing.T) {
 
 func TestBoxScoreHorizontalScrollingBoundary(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
-	
-	m.width = 40 
+	m := New(client, "123", Config{})
+
+	m.width = 40
 	m.height = 40
 	m.focus = boxScoreFocus
 
@@ -300,11 +300,11 @@ func TestBoxScoreHorizontalScrollingBoundary(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		newModel, _ = newModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
 	}
-	
+
 	mEnd := newModel.(Model)
-	
+
 	// Scroll right one more time
 	mOver, _ := mEnd.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
-	
+
 	assert.Equal(t, mEnd.boxScrollX, mOver.(Model).boxScrollX, "Should not scroll past the end of the line")
 }

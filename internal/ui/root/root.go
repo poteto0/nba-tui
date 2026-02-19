@@ -28,13 +28,15 @@ type Model struct {
 	gameID          string
 	width           int
 	height          int
+	config          game_detail.Config
 }
 
-func NewModel(client Client) Model {
+func NewModel(client Client, config game_detail.Config) Model {
 	return Model{
 		client:          client,
 		scoreboardModel: scoreboard.NewModel(client),
 		state:           scoreboardView,
+		config:          config,
 	}
 }
 
@@ -52,7 +54,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case scoreboard.SelectGameMsg:
 		m.state = detailView
 		m.gameID = msg.GameId
-		m.detailModel = game_detail.New(m.client, m.gameID)
+		m.detailModel = game_detail.New(m.client, m.gameID, m.config)
 		// Initialize with current width/height
 		dm, _ := m.detailModel.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 		m.detailModel = dm.(game_detail.Model)

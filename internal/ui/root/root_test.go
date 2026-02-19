@@ -24,7 +24,7 @@ func (m *mockClient) GetPlayByPlay(gameID string) (types.LivePlayByPlayResponse,
 
 func TestRootModel_Transition(t *testing.T) {
 	client := &mockClient{}
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	// Initially should be scoreboard
 	assert.Equal(t, scoreboardView, m.state)
@@ -41,7 +41,7 @@ func TestRootModel_BackToScoreboard(t *testing.T) {
 
 	client := &mockClient{}
 
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	m.state = detailView
 
@@ -69,7 +69,7 @@ func TestRootModel_WindowSize(t *testing.T) {
 
 	client := &mockClient{}
 
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	updatedModel, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 50})
 
@@ -85,7 +85,7 @@ func TestRootModel_View(t *testing.T) {
 
 	client := &mockClient{}
 
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	// Scoreboard view
 
@@ -99,7 +99,7 @@ func TestRootModel_View(t *testing.T) {
 
 	m.state = detailView
 
-	m.detailModel = game_detail.New(client, "123")
+	m.detailModel = game_detail.New(client, "123", game_detail.Config{})
 
 	view = m.View()
 
@@ -111,7 +111,7 @@ func TestRootModel_Init(t *testing.T) {
 
 	client := &mockClient{}
 
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	cmd := m.Init()
 
@@ -123,7 +123,7 @@ func TestRootModel_UpdateDelegation(t *testing.T) {
 
 	client := &mockClient{}
 
-	m := NewModel(client)
+	m := NewModel(client, game_detail.Config{})
 
 	// Test delegation to scoreboard
 
@@ -141,7 +141,7 @@ func TestRootModel_UpdateDelegation(t *testing.T) {
 
 	m.state = detailView
 
-	m.detailModel = game_detail.New(client, "123")
+	m.detailModel = game_detail.New(client, "123", game_detail.Config{})
 
 	// Send a key msg that detail handles
 

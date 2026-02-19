@@ -8,7 +8,7 @@ import (
 
 func TestBoxScoreTotalRow(t *testing.T) {
 	client := &mockNbaClient{}
-	m := New(client, "123")
+	m := New(client, "123", Config{})
 	m.width = 200
 	m.height = 40
 
