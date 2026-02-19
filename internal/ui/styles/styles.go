@@ -25,4 +25,7 @@ var (
 	FaintStyle = lipgloss.NewStyle().Faint(true)
 
 	UnderlineStyle = lipgloss.NewStyle().Underline(true).Foreground(lipgloss.Color("2"))
+
+	GreenStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	RedStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
 )
