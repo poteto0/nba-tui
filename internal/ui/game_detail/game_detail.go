@@ -159,18 +159,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				headerFormat := "%-15s %-5s %3s %3s %5s %3s %3s %5s %3s %3s %5s %4s %4s %3s %3s %3s %3s %3s %3s %3s %4s"
 				fullHeader := fmt.Sprintf(headerFormat,
 					"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
-				
+
 				w_boxscore := (m.width * 6) / 10
 				if m.width < 100 {
 					w_boxscore = m.width
 				}
 				contentWidth := w_boxscore - 2
-				
+
 				maxScroll := len(fullHeader) - contentWidth
 				if maxScroll < 0 {
 					maxScroll = 0
 				}
-				
+
 				if m.boxScrollX < maxScroll {
 					m.boxScrollX++
 				}
@@ -318,25 +318,26 @@ func (m Model) View() string {
 func (m Model) renderHeaderStr() string {
 	game := m.boxScore.Game
 	var status string
-	
-	if !game.IsGameStart() {
+
+	switch {
+	case !game.IsGameStart():
 		status = "not started"
-	} else if game.IsFinished() {
+	case game.IsFinished():
 		status = game.GameStatusText
-	} else {
+	default:
 		// In-progress
 		periodStr := fmt.Sprintf("%dQ", game.Period)
 		if game.IsOverTime() {
 			periodStr = fmt.Sprintf("%dOT", game.OverTimeNum())
 		}
-		
+
 		clock := game.Clock()
 		if len(clock) > 5 {
 			clock = clock[:5]
 		} else {
 			clock = "-"
 		}
-		
+
 		status = fmt.Sprintf("%s (%s)", periodStr, clock)
 	}
 
@@ -439,28 +440,12 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	}
 	s := "Box Scores\n"
 
-	// Format:
-	// PLAYER(15) | MIN(5) | Others right aligned
-	// %-15s (Left)
-	// %-5s  (Left, MIN)
-	// %3s   (Right, e.g. PTS, REB)
-	// All other stats are numeric or pct, so Right Align (%Xs or %Xd) is standard.
-	// Header also needs to match.
-	// FGM(3) FGA(3) FG%(5) 3PM(3) 3PA(3) 3P%(5) FTM(3) FTA(3) FT%(5) OREB(4) DREB(4) REB(3) AST(3) STL(3) BLK(3) TO(3) PF(3) PTS(3) +/-(4)
-
-	// Construct format strings
-	// Header:
-	// PLAYER          MIN   FGM FGA FG%   3PM 3PA 3P%   FTM FTA FT%   OREB DREB REB AST STL BLK TO  PF  PTS +/-
-	// Note: spacing between columns.
-	// Let's use specific widths.
-	// We construct the FULL line first, then slice it.
-
 	headerFormat := "%-15s %-5s %3s %3s %5s %3s %3s %5s %3s %3s %5s %4s %4s %3s %3s %3s %3s %3s %3s %3s %4s"
 	fullHeader := fmt.Sprintf(headerFormat,
 		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
 
 	// Apply horizontal scroll to header
-	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width, 16))
+	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width))
 	s += header + "\n"
 
 	if team.Players == nil {
@@ -468,9 +453,16 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	}
 	players := *team.Players
 
-	bodyHeight := height - 3 // Title + Header(2 lines)
-	if bodyHeight < 1 {
-		return s
+	// Reserve space for Total row (Separator + Stats) if available
+	hasTeamStats := team.Statistics != nil
+	reservedBottom := 0
+	if hasTeamStats {
+		reservedBottom = 2
+	}
+
+	bodyHeight := height - 3 - reservedBottom // Title + Header(2 lines)
+	if bodyHeight < 0 {
+		bodyHeight = 0
 	}
 
 	for i := 0; i < bodyHeight; i++ {
@@ -489,10 +481,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			}
 
 			if p.Statistics == nil {
-				// We still need to format the line to respect scrolling, even if empty stats
-				// Or just show name and -
 				line := fmt.Sprintf("%-15s -", name)
-				s += m.scrollLine(line, width, 16) + "\n"
+				s += m.scrollLine(line, width) + "\n"
 				continue
 			}
 			stats := *p.Statistics
@@ -522,14 +512,6 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				min = clockRaw[:5]
 			}
 
-			// Use same widths as header
-			// Right align means %3d etc.
-			// %-15s (Left)
-			// %-5s  (Left)
-			// %3d   (Right) ...
-			
-			// FG% is %5s (Right) to match header width 5
-			
 			fullLine := fmt.Sprintf(headerFormat,
 				name, min,
 				fmt.Sprintf("%d", getInt(stats.FgM)),
@@ -553,34 +535,101 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				getFloat(stats.PlusMinus),
 			)
 
-			s += m.scrollLine(fullLine, width, 16) + "\n"
+			s += m.scrollLine(fullLine, width) + "\n"
 		}
 	}
+
+	if hasTeamStats {
+		linesRendered := bodyHeight
+		if len(players)-m.boxOffset < bodyHeight {
+			linesRendered = len(players) - m.boxOffset
+		}
+		if linesRendered < 0 {
+			linesRendered = 0
+		}
+
+		padding := bodyHeight - linesRendered
+		if padding > 0 {
+			s += strings.Repeat("\n", padding)
+		}
+
+		// Separator
+		separator := strings.Repeat("─", width)
+		s += separator + "\n"
+
+		stats := *team.Statistics
+		getInt := func(i *int) int {
+			if i == nil {
+				return 0
+			}
+			return *i
+		}
+		getPct := func(f *float64) string {
+			if f == nil {
+				return "0.0"
+			}
+			return fmt.Sprintf("%.1f", *f*100)
+		}
+
+		min := "-"
+		if stats.Minutes != "" {
+			min = stats.MinutesClock()
+			if len(min) > 5 {
+				min = min[:5]
+			}
+		}
+
+		totalLine := fmt.Sprintf(headerFormat,
+			"TOTAL", min,
+			fmt.Sprintf("%d", getInt(stats.FgM)),
+			fmt.Sprintf("%d", getInt(stats.FgA)),
+			getPct(stats.FgPct),
+			fmt.Sprintf("%d", getInt(stats.Fg3M)),
+			fmt.Sprintf("%d", getInt(stats.Fg3A)),
+			getPct(stats.Fg3Pct),
+			fmt.Sprintf("%d", getInt(stats.FtM)),
+			fmt.Sprintf("%d", getInt(stats.FtA)),
+			getPct(stats.FtPct),
+			fmt.Sprintf("%d", getInt(stats.OReb)),
+			fmt.Sprintf("%d", getInt(stats.DReb)),
+			fmt.Sprintf("%d", getInt(stats.Reb)),
+			fmt.Sprintf("%d", getInt(stats.Ast)),
+			fmt.Sprintf("%d", getInt(stats.Stl)),
+			fmt.Sprintf("%d", getInt(stats.Blk)),
+			fmt.Sprintf("%d", getInt(stats.Tov)),
+			fmt.Sprintf("%d", getInt(stats.PF)),
+			fmt.Sprintf("%d", getInt(stats.Pts)),
+			"-",
+		)
+		s += m.scrollLine(totalLine, width)
+	}
+
 	return s
 }
 
-func (m Model) scrollLine(line string, width int, fixedWidth int) string {
+func (m Model) scrollLine(line string, width int) string {
+	const fixedWidth = 16
 	if len(line) <= fixedWidth {
 		return line
 	}
-	
+
 	fixed := line[:fixedWidth]
 	scrollable := line[fixedWidth:]
-	
+
 	if m.boxScrollX >= len(scrollable) {
 		return fixed
 	}
-	
+
 	remainingWidth := width - fixedWidth
 	if remainingWidth <= 0 {
 		return fixed[:width]
 	}
-	
+
 	start := m.boxScrollX
 	end := start + remainingWidth
 	if end > len(scrollable) {
 		end = len(scrollable)
 	}
-	
+
 	return fixed + scrollable[start:end]
 }
