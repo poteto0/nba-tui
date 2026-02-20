@@ -5,6 +5,7 @@
 - 💄 Terminal UI for NBA Score
 - 👾 90% VibeCoding
 - ✨ Vim-Like KeyBinding
+- 🤩 Awesome Example of [go-nba-sdk](https://github.com/poteto0/go-nba-sdk)
 
 ## Quick Start
 
