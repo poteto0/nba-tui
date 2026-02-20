@@ -443,14 +443,58 @@ func (m Model) renderGameLog(width, height int) string {
 }
 
 func (m Model) renderBoxScore(team types.Team, width, height int) string {
-	if height < 4 {
-		return "Box Scores"
-	}
-	s := "Box Scores\n"
+	s := ""
 
-	headerFormat := "%-15s %-5s %3s %3s %5s %3s %3s %5s %3s %3s %5s %4s %4s %3s %3s %3s %3s %3s %3s %3s %4s"
-	fullHeader := fmt.Sprintf(headerFormat,
-		"PLAYER", "MIN", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TO", "PF", "PTS", "+/-")
+	// Define columns configuration
+	type col struct {
+		name  string
+		width int
+		align lipgloss.Position
+	}
+	cols := []col{
+		{"PLAYER", 15, lipgloss.Left},
+		{"MIN", 5, lipgloss.Left},
+		{"FGM", 3, lipgloss.Right},
+		{"FGA", 3, lipgloss.Right},
+		{"FG%", 5, lipgloss.Right},
+		{"3PM", 3, lipgloss.Right},
+		{"3PA", 3, lipgloss.Right},
+		{"3P%", 5, lipgloss.Right},
+		{"FTM", 3, lipgloss.Right},
+		{"FTA", 3, lipgloss.Right},
+		{"FT%", 5, lipgloss.Right},
+		{"OREB", 4, lipgloss.Right},
+		{"DREB", 4, lipgloss.Right},
+		{"REB", 3, lipgloss.Right},
+		{"AST", 3, lipgloss.Right},
+		{"STL", 3, lipgloss.Right},
+		{"BLK", 3, lipgloss.Right},
+		{"TO", 3, lipgloss.Right},
+		{"PF", 3, lipgloss.Right},
+		{"PTS", 3, lipgloss.Right},
+		{"+/-", 4, lipgloss.Right},
+	}
+
+	renderRow := func(vals []string) string {
+		parts := make([]string, 0, len(cols))
+		for i, c := range cols {
+			val := ""
+			if i < len(vals) {
+				val = vals[i]
+			}
+			// Use lipgloss to align and pad. It handles ANSI width correctly.
+			cell := lipgloss.NewStyle().Width(c.width).Align(c.align).Render(val)
+			parts = append(parts, cell)
+		}
+		return strings.Join(parts, " ")
+	}
+
+	// Header
+	headerVals := make([]string, len(cols))
+	for i, c := range cols {
+		headerVals[i] = c.name
+	}
+	fullHeader := renderRow(headerVals)
 
 	// Apply horizontal scroll to header
 	header := styles.TableHeaderStyle.Render(m.scrollLine(fullHeader, width))
@@ -485,7 +529,13 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 		reservedBottom = 2
 	}
 
-	bodyHeight := height - 3 - reservedBottom // Title + Header(2 lines)
+	// Height calculation: Header takes 2 lines (due to border?).
+	// Actually styles.TableHeaderStyle adds a bottom border, so it consumes vertical space?
+	// Render(str) -> content + border.
+	// If str is 1 line, result is 2 lines (content + border).
+	// So Header consumes 2 lines.
+	// We removed Title, so we have more space.
+	bodyHeight := height - 2 - reservedBottom
 	if bodyHeight < 0 {
 		bodyHeight = 0
 	}
@@ -500,14 +550,17 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			} else {
 				name = p.FamilyName
 			}
-			// Truncate name if too long for column
+			// Truncate name if too long for column (manual check for safety, though lipgloss handles it)
 			if len(name) > 15 {
 				name = name[:15]
 			}
 
 			if p.Statistics == nil {
-				line := fmt.Sprintf("%-15s -", name)
-				s += m.scrollLine(line, width) + "\n"
+				// Empty row
+				vals := make([]string, len(cols))
+				vals[0] = name
+				vals[1] = "-"
+				s += m.scrollLine(renderRow(vals), width) + "\n"
 				continue
 			}
 			stats := *p.Statistics
@@ -562,7 +615,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				}
 			}
 
-			fullLine := fmt.Sprintf(headerFormat,
+			// Construct values matching cols order
+			rowVals := []string{
 				name, min,
 				fmt.Sprintf("%d", getInt(stats.FgM)),
 				fmt.Sprintf("%d", getInt(stats.FgA)),
@@ -583,9 +637,9 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				fmt.Sprintf("%d", getInt(stats.PF)),
 				ptsStr,
 				pmStr,
-			)
+			}
 
-			s += m.scrollLine(fullLine, width) + "\n"
+			s += m.scrollLine(renderRow(rowVals), width) + "\n"
 		}
 	}
 
@@ -629,7 +683,7 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			}
 		}
 
-		totalLine := fmt.Sprintf(headerFormat,
+		totalVals := []string{
 			"TOTAL", min,
 			fmt.Sprintf("%d", getInt(stats.FgM)),
 			fmt.Sprintf("%d", getInt(stats.FgA)),
@@ -650,8 +704,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			fmt.Sprintf("%d", getInt(stats.PF)),
 			fmt.Sprintf("%d", getInt(stats.Pts)),
 			"-",
-		)
-		s += m.scrollLine(totalLine, width)
+		}
+		s += m.scrollLine(renderRow(totalVals), width)
 	}
 
 	return s

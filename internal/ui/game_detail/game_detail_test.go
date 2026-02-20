@@ -142,7 +142,7 @@ func TestView_Layout(t *testing.T) {
 		m.width = 100
 		m.height = 40
 		view := m.View()
-		assert.Contains(t, view, "Box Scores")
+		assert.Contains(t, view, "PLAYER")
 		assert.Contains(t, view, "gamelog")
 	})
 
@@ -150,7 +150,7 @@ func TestView_Layout(t *testing.T) {
 		m.width = 40
 		m.height = 40
 		view := m.View()
-		assert.Contains(t, view, "Box Scores")
+		assert.Contains(t, view, "PLAYER")
 		assert.Contains(t, view, "gamelog")
 	})
 
