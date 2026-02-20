@@ -3,8 +3,8 @@ package scoreboard
 import (
 	"fmt"
 	"nba-tui/internal/ui/styles"
+	"nba-tui/internal/utils"
 	"os/exec"
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -148,17 +148,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func formatScore(score int) string {
-	s := fmt.Sprintf("%d", score)
-	if len(s) == 1 {
-		return " " + s + " "
-	}
-	if len(s) == 2 {
-		return " " + s
-	}
-	return s
-}
-
 func (m Model) View() string {
 	if m.Err != nil {
 		return fmt.Sprintf("Error: %v", m.Err)
@@ -193,8 +182,8 @@ func (m Model) View() string {
 		}
 		homeName := game.HomeTeam.TeamTricode
 		awayName := game.AwayTeam.TeamTricode
-		homeScoreStr := formatScore(game.HomeTeam.Score)
-		awayScoreStr := formatScore(game.AwayTeam.Score)
+		homeScoreStr := utils.FormatScore(game.HomeTeam.Score)
+		awayScoreStr := utils.FormatScore(game.AwayTeam.Score)
 
 		if game.HomeTeam.Score > game.AwayTeam.Score {
 			homeName = styles.BoldStyle.Render(homeName)
@@ -206,7 +195,7 @@ func (m Model) View() string {
 
 		content := fmt.Sprintf(
 			"%s\n%s | %s\n ---------\n%s | %s",
-			center(status, 11),
+			utils.Center(status, 11),
 			homeName, awayName,
 			homeScoreStr, awayScoreStr,
 		)
@@ -227,14 +216,4 @@ func (m Model) View() string {
 
 	scoreboardView := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	return lipgloss.JoinVertical(lipgloss.Left, helpText, scoreboardView)
-}
-
-func center(s string, width int) string {
-	padding := width - lipgloss.Width(s)
-	if padding <= 0 {
-		return s
-	}
-	left := padding / 2
-	right := padding - left
-	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
 }

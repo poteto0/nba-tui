@@ -3,6 +3,7 @@ package game_detail
 import (
 	"fmt"
 	"nba-tui/internal/ui/styles"
+	"nba-tui/internal/utils"
 	"os/exec"
 	"strings"
 	"time"
@@ -565,35 +566,16 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			}
 			stats := *p.Statistics
 
-			getInt := func(i *int) int {
-				if i == nil {
-					return 0
-				}
-				return *i
-			}
-			getPct := func(f *float64) string {
-				if f == nil {
-					return "0.0"
-				}
-				return fmt.Sprintf("%.1f", *f*100)
-			}
-			getFloat := func(f *float64) string {
-				if f == nil {
-					return "0"
-				}
-				return fmt.Sprintf("%.0f", *f)
-			}
-
 			clockRaw := stats.MinutesClock()
 			min := "-"
 			if len(clockRaw) > 5 {
 				min = clockRaw[:5]
 			}
 
-			ptsStr := fmt.Sprintf("%d", getInt(stats.Pts))
-			rebStr := fmt.Sprintf("%d", getInt(stats.Reb))
-			astStr := fmt.Sprintf("%d", getInt(stats.Ast))
-			pmStr := getFloat(stats.PlusMinus)
+			ptsStr := utils.PtrToIntStr(stats.Pts)
+			rebStr := utils.PtrToIntStr(stats.Reb)
+			astStr := utils.PtrToIntStr(stats.Ast)
+			pmStr := utils.PtrToFloatStr2f(stats.PlusMinus)
 
 			if !m.config.NoDecoration {
 				if stats.Pts != nil && *stats.Pts == maxPts && maxPts > 0 {
@@ -618,23 +600,23 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			// Construct values matching cols order
 			rowVals := []string{
 				name, min,
-				fmt.Sprintf("%d", getInt(stats.FgM)),
-				fmt.Sprintf("%d", getInt(stats.FgA)),
-				getPct(stats.FgPct),
-				fmt.Sprintf("%d", getInt(stats.Fg3M)),
-				fmt.Sprintf("%d", getInt(stats.Fg3A)),
-				getPct(stats.Fg3Pct),
-				fmt.Sprintf("%d", getInt(stats.FtM)),
-				fmt.Sprintf("%d", getInt(stats.FtA)),
-				getPct(stats.FtPct),
-				fmt.Sprintf("%d", getInt(stats.OReb)),
-				fmt.Sprintf("%d", getInt(stats.DReb)),
+				utils.PtrToIntStr(stats.FgM),
+				utils.PtrToIntStr(stats.FgA),
+				utils.PtrToPctStr(stats.FgPct),
+				utils.PtrToIntStr(stats.Fg3M),
+				utils.PtrToIntStr(stats.Fg3A),
+				utils.PtrToPctStr(stats.Fg3Pct),
+				utils.PtrToIntStr(stats.FtM),
+				utils.PtrToIntStr(stats.FtA),
+				utils.PtrToPctStr(stats.FtPct),
+				utils.PtrToIntStr(stats.OReb),
+				utils.PtrToIntStr(stats.DReb),
 				rebStr,
 				astStr,
-				fmt.Sprintf("%d", getInt(stats.Stl)),
-				fmt.Sprintf("%d", getInt(stats.Blk)),
-				fmt.Sprintf("%d", getInt(stats.Tov)),
-				fmt.Sprintf("%d", getInt(stats.PF)),
+				utils.PtrToIntStr(stats.Stl),
+				utils.PtrToIntStr(stats.Blk),
+				utils.PtrToIntStr(stats.Tov),
+				utils.PtrToIntStr(stats.PF),
 				ptsStr,
 				pmStr,
 			}
@@ -662,18 +644,6 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 		s += separator + "\n"
 
 		stats := *team.Statistics
-		getInt := func(i *int) int {
-			if i == nil {
-				return 0
-			}
-			return *i
-		}
-		getPct := func(f *float64) string {
-			if f == nil {
-				return "0.0"
-			}
-			return fmt.Sprintf("%.1f", *f*100)
-		}
 
 		min := "-"
 		if stats.Minutes != "" {
@@ -685,24 +655,24 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 
 		totalVals := []string{
 			"TOTAL", min,
-			fmt.Sprintf("%d", getInt(stats.FgM)),
-			fmt.Sprintf("%d", getInt(stats.FgA)),
-			getPct(stats.FgPct),
-			fmt.Sprintf("%d", getInt(stats.Fg3M)),
-			fmt.Sprintf("%d", getInt(stats.Fg3A)),
-			getPct(stats.Fg3Pct),
-			fmt.Sprintf("%d", getInt(stats.FtM)),
-			fmt.Sprintf("%d", getInt(stats.FtA)),
-			getPct(stats.FtPct),
-			fmt.Sprintf("%d", getInt(stats.OReb)),
-			fmt.Sprintf("%d", getInt(stats.DReb)),
-			fmt.Sprintf("%d", getInt(stats.Reb)),
-			fmt.Sprintf("%d", getInt(stats.Ast)),
-			fmt.Sprintf("%d", getInt(stats.Stl)),
-			fmt.Sprintf("%d", getInt(stats.Blk)),
-			fmt.Sprintf("%d", getInt(stats.Tov)),
-			fmt.Sprintf("%d", getInt(stats.PF)),
-			fmt.Sprintf("%d", getInt(stats.Pts)),
+			utils.PtrToIntStr(stats.FgM),
+			utils.PtrToIntStr(stats.FgA),
+			utils.PtrToPctStr(stats.FgPct),
+			utils.PtrToIntStr(stats.Fg3M),
+			utils.PtrToIntStr(stats.Fg3A),
+			utils.PtrToPctStr(stats.Fg3Pct),
+			utils.PtrToIntStr(stats.FtM),
+			utils.PtrToIntStr(stats.FtA),
+			utils.PtrToPctStr(stats.FtPct),
+			utils.PtrToIntStr(stats.OReb),
+			utils.PtrToIntStr(stats.DReb),
+			utils.PtrToIntStr(stats.Reb),
+			utils.PtrToIntStr(stats.Ast),
+			utils.PtrToIntStr(stats.Stl),
+			utils.PtrToIntStr(stats.Blk),
+			utils.PtrToIntStr(stats.Tov),
+			utils.PtrToIntStr(stats.PF),
+			utils.PtrToIntStr(stats.Pts),
 			"-",
 		}
 		s += m.scrollLine(renderRow(totalVals), width)
