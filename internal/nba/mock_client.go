@@ -52,7 +52,7 @@ func (c *MockClient) GetBoxScore(gameID string) (types.LiveBoxScoreResponse, err
 	pts := 30
 	reb := 10
 	ast := 8
-	
+
 	pInt := func(i int) *int { return &i }
 	pFloat := func(f float64) *float64 { return &f }
 
@@ -87,7 +87,7 @@ func (c *MockClient) GetBoxScore(gameID string) (types.LiveBoxScoreResponse, err
 			},
 		},
 	}
-	
+
 	awayPlayers := []types.Player{
 		{
 			FirstName:  "Stephen",
@@ -107,24 +107,34 @@ func (c *MockClient) GetBoxScore(gameID string) (types.LiveBoxScoreResponse, err
 
 	return types.LiveBoxScoreResponse{
 		Game: types.Game{
-			GameId:         gameID,
-			GameStatus:     2,
-			GameStatusText: "Q4 2:00",
-			Period:         4,
-			GameClock:      "PT02M00.00S",
+			GameId: gameID,
 			HomeTeam: types.Team{
-				TeamName:    "Lakers",
+				TeamId:      1,
 				TeamTricode: "LAL",
-				TeamId:      1610612747,
-				Score:       102,
+				Score:       110,
 				Players:     &homePlayers,
+				Statistics: &types.TeamBoxScoreStatistic{
+					CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
+						Pts:     pInt(110),
+						Reb:     pInt(45),
+						Ast:     pInt(25),
+						Minutes: "PT240M00.00S",
+					},
+				},
 			},
 			AwayTeam: types.Team{
-				TeamName:    "Warriors",
+				TeamId:      2,
 				TeamTricode: "GSW",
-				TeamId:      1610612744,
-				Score:       99,
+				Score:       100,
 				Players:     &awayPlayers,
+				Statistics: &types.TeamBoxScoreStatistic{
+					CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
+						Pts:     pInt(100),
+						Reb:     pInt(40),
+						Ast:     pInt(20),
+						Minutes: "PT240M00.00S",
+					},
+				},
 			},
 		},
 	}, nil
