@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/poteto0/go-nba-sdk/types"
@@ -657,27 +659,21 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 
 func (m Model) scrollLine(line string, width int) string {
 	const fixedWidth = 16
-	if len(line) <= fixedWidth {
-		return line
-	}
 
-	fixed := line[:fixedWidth]
-	scrollable := line[fixedWidth:]
-
-	if m.boxScrollX >= len(scrollable) {
-		return fixed
-	}
+	// Visual cut for the fixed part (0 to fixedWidth)
+	fixed := ansi.Cut(line, 0, fixedWidth)
 
 	remainingWidth := width - fixedWidth
 	if remainingWidth <= 0 {
-		return fixed[:width]
+		return fixed
 	}
 
-	start := m.boxScrollX
+	// Visual cut for the scrollable part
+	// Start index is relative to the whole line: fixedWidth + scroll offset
+	start := fixedWidth + m.boxScrollX
 	end := start + remainingWidth
-	if end > len(scrollable) {
-		end = len(scrollable)
-	}
 
-	return fixed + scrollable[start:end]
+	scrollable := ansi.Cut(line, start, end)
+
+	return fixed + scrollable
 }
