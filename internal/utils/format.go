@@ -6,7 +6,7 @@ func PtrToIntStr(i *int) string {
 	if i == nil {
 		return "0"
 	}
-	return fmt.Sprintf("%d", i)
+	return fmt.Sprintf("%d", *i)
 }
 
 func PtrToFloatStr2f(f *float64) string {

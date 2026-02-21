@@ -231,7 +231,12 @@ func (m Model) View() string {
 
 	// 1. Fixed heights
 	h_selected := 1
-	selectedTeamView := styles.UnderlineStyle.Render(fmt.Sprintf("Selected Team: %s", team.TeamTricode))
+	teamInfo := fmt.Sprintf("Selected Team: %s", team.TeamTricode)
+	if !m.lastUpdated.IsZero() {
+		updateTimeStr := m.lastUpdated.Format("15:04:05") // HH:MM:SS
+		teamInfo = fmt.Sprintf("%s (Last Updated: %s)", teamInfo, updateTimeStr)
+	}
+	selectedTeamView := styles.UnderlineStyle.Render(teamInfo)
 
 	// Render footer first to know its height
 	footerRaw := m.renderFooter(m.width)

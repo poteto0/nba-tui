@@ -14,5 +14,11 @@ $ just build
 $ ./nba-tui
 ```
 
+## Options
+
+| Option      | Description                                       | Default | Minimum |
+|-------------|---------------------------------------------------|---------|---------|
+| `--reload`  | Auto-refresh interval for game data in seconds.   | 30      | 10      |
+
 ![score-board](./docs/img/score_board.png)
 ![game-detail](./docs/img/game_detail.png)

@@ -15,7 +15,12 @@ import (
 func main() {
 	mock := flag.Bool("mock", false, "Use mock data for testing")
 	noDeco := flag.Bool("no-decoration", false, "Disable color decorations")
+	reload := flag.Int("reload", 30, "Reload interval in seconds (min 10s)")
 	flag.Parse()
+
+	if *reload < 10 {
+		*reload = 10
+	}
 
 	var client root.Client
 	if *mock {
@@ -27,7 +32,7 @@ func main() {
 	config := game_detail.Config{
 		NoDecoration: *noDeco,
 	}
-	m := root.NewModel(client, config)
+	m := root.NewModel(client, config, *reload)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

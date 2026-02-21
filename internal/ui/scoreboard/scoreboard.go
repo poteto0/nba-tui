@@ -20,14 +20,6 @@ type SelectGameMsg struct {
 	GameId string
 }
 
-type tickMsg time.Time
-
-func tick() tea.Cmd {
-	return tea.Tick(30*time.Second, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
-}
-
 type ScoreboardProvider interface {
 	GetScoreboard() ([]types.Game, error)
 }
@@ -55,7 +47,7 @@ func NewModel(client ScoreboardProvider) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.FetchScoreboard(), tick())
+	return m.FetchScoreboard()
 }
 
 func (m Model) FetchScoreboard() tea.Cmd {
@@ -107,8 +99,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Games = msg.Games
 		m.LastUpdated = time.Now()
 		return m, nil
-	case tickMsg:
-		return m, tea.Batch(m.FetchScoreboard(), tick())
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q", "esc":

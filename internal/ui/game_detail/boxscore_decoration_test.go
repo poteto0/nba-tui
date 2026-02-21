@@ -6,7 +6,10 @@ import (
 	"github.com/poteto0/go-nba-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"regexp"
 )
+
+var ansiStripper = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 func TestBoxScoreDecoration(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.TrueColor)
@@ -65,8 +68,9 @@ func TestBoxScoreDecoration(t *testing.T) {
 
 	// Bold check (extremely simplified, lipgloss uses ANSI codes)
 	// Bold is \x1b[1m
-	assert.Contains(t, view, "20", "Player 2 points should be in view")
-	assert.Contains(t, view, "5", "Player 1 rebounds should be in view")
+	viewStripped := ansiStripper.ReplaceAllString(view, "")
+	assert.Contains(t, viewStripped, "20", "Player 2 points should be in view")
+	assert.Contains(t, viewStripped, "5", "Player 1 rebounds should be in view")
 
 	// Decoration check
 	t.Run("NoDecoration true", func(t *testing.T) {
