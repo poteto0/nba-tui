@@ -164,12 +164,8 @@ func (m Model) View() string {
 			style = styles.ActiveBorderStyle
 		}
 
-		status := ""
-		if game.IsFinished() {
-			status = "Final"
-		} else {
-			status = fmt.Sprintf("%dQ (%s)", game.Period, game.GameClock)
-		}
+		status := renderGameStatus(game)
+
 		homeName := game.HomeTeam.TeamTricode
 		awayName := game.AwayTeam.TeamTricode
 		homeScoreStr := utils.FormatScore(game.HomeTeam.Score)
@@ -184,7 +180,7 @@ func (m Model) View() string {
 		}
 
 		content := fmt.Sprintf(
-			"%s\n%s | %s\n ---------\n%s | %s",
+			"%s\n %s | %s\n ---------\n %s | %s",
 			utils.Center(status, 11),
 			homeName, awayName,
 			homeScoreStr, awayScoreStr,
@@ -207,3 +203,18 @@ func (m Model) View() string {
 	scoreboardView := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	return lipgloss.JoinVertical(lipgloss.Left, helpText, scoreboardView)
 }
+
+func renderGameStatus(game types.Game) string {
+	switch game.GameStatus {
+	case 1:
+		return "Not Started"
+	case 2:
+		return fmt.Sprintf("%dQ (%s)", game.Period, game.Clock()[:5])
+	case 3:
+		return "Final"
+	default:
+		return "Unknown"
+	}
+}
+
+//
