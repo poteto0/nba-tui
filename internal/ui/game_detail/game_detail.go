@@ -412,27 +412,7 @@ func (m Model) renderHeaderStr() string {
 	game := m.boxScore.Game
 	var status string
 
-	switch {
-	case !game.IsGameStart():
-		status = "not started"
-	case game.IsFinished():
-		status = game.GameStatusText
-	default:
-		// In-progress
-		periodStr := fmt.Sprintf("%dQ", game.Period)
-		if game.IsOverTime() {
-			periodStr = fmt.Sprintf("%dOT", game.OverTimeNum())
-		}
-
-		clock := game.Clock()
-		if len(clock) > 5 {
-			clock = clock[:5]
-		} else {
-			clock = "-"
-		}
-
-		status = fmt.Sprintf("%s (%s)", periodStr, clock)
-	}
+	status = utils.RenderGameStatus(game)
 
 	homeTricode := game.HomeTeam.TeamTricode
 	homeScore := fmt.Sprintf("%d", game.HomeTeam.Score)

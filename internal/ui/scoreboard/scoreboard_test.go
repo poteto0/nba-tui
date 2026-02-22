@@ -24,7 +24,7 @@ func (m *mockClient) GetScoreboard() ([]types.Game, error) {
 func TestScoreboardView(t *testing.T) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 
-	t.Run("renders a not started game", func(t *testing.T) {
+	t.Run("renders a Not Started game", func(t *testing.T) {
 		games := []types.Game{
 			{
 				HomeTeam:   types.Team{TeamTricode: "POR"},
@@ -230,14 +230,14 @@ func TestScoreboardView(t *testing.T) {
 				HomeTeam:   types.Team{TeamTricode: "POR"},
 				AwayTeam:   types.Team{TeamTricode: "DEN"},
 				Period:     2,
-				GameClock:  "5:00",
+				GameClock:  "PT05M00.00S",
 				GameStatus: 2,
 			},
 		}
 		m := NewModel(&mockClient{games: games})
 		m.Games = games
 		view := m.View()
-		assert.Contains(t, view, "2Q (5:00)")
+		assert.Contains(t, view, "2Q (05:00)")
 	})
 
 	t.Run("navigation boundaries", func(t *testing.T) {

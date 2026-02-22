@@ -104,7 +104,7 @@ func TestGameStatusFormatting(t *testing.T) {
 		}
 
 		view := m.View()
-		assert.Contains(t, view, "not started")
+		assert.Contains(t, view, "Not Started")
 	})
 
 	t.Run("Overtime 1OT", func(t *testing.T) {

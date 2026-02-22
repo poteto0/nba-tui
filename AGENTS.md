@@ -75,20 +75,22 @@ Selected Team: POR
 - period switch: <ctrl+q> switch period for GameLog (1Q -> 2Q -> ... -> Final -> 1Q)
 
 ##### Box Score Columns
+
 - Format: `MIN FGM FGA FG% 3PM 3PA 3P% FTM FTA FT% OREB DREB REB AST STL BLK TO PF PTS +/-`
 - `MIN`: First 5 characters (e.g., `36:10`). Shows `-` if length <= 5.
 - Alignment: `PLAYER` and `MIN` are left-aligned. All other stats are right-aligned.
 
 ##### Game Status Display
-- "not started": When the game hasn't started yet.
+
+- "Not Started": When the game hasn't started yet.
 - Overtime: Displayed as `1OT`, `2OT`, etc. (instead of `5Q`, `6Q`).
 
 ##### UI Style
+
 - Selected Period in GameLog: Green color + Underline
 - Unselected Period in GameLog: Faint color
 - Selected Pane: Green border
 - Selected Team Display: "Selected Team: <TeamTriCode>" above panes
-
 
 ## Development
 
@@ -104,6 +106,7 @@ Selected Team: POR
 ### Mock Mode
 
 Start with mock data for development:
+
 ```bash
 go run ./cmd/nba-tui/main.go --mock
 ```
