@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	runewidth "github.com/mattn/go-runewidth"
-
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/poteto0/go-nba-sdk/types"
 )
 
@@ -166,10 +165,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.searchInput.Blur()
 				return m, nil
 			}
+		default:
+			var cmd tea.Cmd
+			m.searchInput, cmd = m.searchInput.Update(msg)
+			return m, cmd
 		}
-		var cmd tea.Cmd
-		m.searchInput, cmd = m.searchInput.Update(msg)
-		return m, cmd
 	}
 
 	switch msg := msg.(type) {
@@ -646,10 +646,6 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			} else {
 				name = p.FamilyName
 			}
-			// Truncate name if too long for column (manual check for safety, though lipgloss handles it)
-			// if len(name) > 15 {
-			// 	name = name[:15]
-			// }
 
 			if p.Statistics == nil {
 				// Empty row
@@ -668,17 +664,11 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 					name = prefix + name
 				}
 			}
-            
-            // Ensure name fits within column width (15) for PLAYER column
-			const playerColWidth = 15 // cols[0].width is 15
-			currentNameWidth := runewidth.StringWidth(name)
 
-			if currentNameWidth > playerColWidth {
-				name = runewidth.Truncate(name, playerColWidth, "")
-			} else if currentNameWidth < playerColWidth {
-				name = name + strings.Repeat(" ", playerColWidth-currentNameWidth)
+			// Truncate name if too long for column (manual check for safety, though lipgloss handles it)
+			if len(name) > 15 {
+				name = name[:15]
 			}
-
 
 			clockRaw := stats.MinutesClock()
 			min := "-"
@@ -750,7 +740,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 
 			// Construct values matching cols order
 			rowVals := []string{
-				name, min,
+				name,
+				min,
 				utils.PtrToIntStr(stats.FgM),
 				utils.PtrToIntStr(stats.FgA),
 				utils.PtrToPctStr(stats.FgPct),
@@ -832,60 +823,11 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	return s
 }
 
-func visualSubstring(s string, startVisual, endVisual int) string {
-	var (
-		visualWidth int
-		startIdx    int
-		endIdx      int
-		rs          = []rune(s)
-	)
-
-	// Calculate startIdx
-	for i, r := range rs {
-		w := runewidth.RuneWidth(r)
-		if visualWidth >= startVisual {
-			startIdx = i
-			break
-		}
-		visualWidth += w
-		startIdx = i + 1 // in case visualWidth never reaches startVisual
-	}
-
-	// Calculate endIdx
-	visualWidth = 0
-	for i, r := range rs {
-		if i < startIdx { // skip until startIdx
-			continue
-		}
-		w := runewidth.RuneWidth(r)
-		if visualWidth >= endVisual-startVisual { // endVisual is absolute, endVisual-startVisual is relative
-			endIdx = i
-			break
-		}
-		visualWidth += w
-		endIdx = i + 1
-	}
-
-	// Adjust endIdx to not exceed actual string length
-	if endIdx > len(rs) {
-		endIdx = len(rs)
-	}
-	// Adjust startIdx to not exceed actual string length
-	if startIdx > len(rs) {
-		startIdx = len(rs)
-	}
-    if startIdx > endIdx {
-        return ""
-    }
-
-	return string(rs[startIdx:endIdx])
-}
-
 func (m Model) scrollLine(line string, width int) string {
 	const fixedWidth = 16
 
 	// Visual cut for the fixed part (0 to fixedWidth)
-	fixed := visualSubstring(line, 0, fixedWidth)
+	fixed := ansi.Cut(line, 0, fixedWidth)
 
 	remainingWidth := width - fixedWidth
 	if remainingWidth <= 0 {
@@ -897,7 +839,7 @@ func (m Model) scrollLine(line string, width int) string {
 	startVisual := fixedWidth + m.boxScrollX
 	endVisual := startVisual + remainingWidth
 
-	scrollable := visualSubstring(line, startVisual, endVisual)
+	scrollable := ansi.Cut(line, startVisual, endVisual)
 
 	return fixed + scrollable
 }

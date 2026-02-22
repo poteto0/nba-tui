@@ -5,8 +5,8 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/poteto0/go-nba-sdk/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"regexp"
+	"testing"
 )
 
 var ansiStripper = regexp.MustCompile("\x1b\\[[0-9;]*m")

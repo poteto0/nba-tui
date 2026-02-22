@@ -16,10 +16,10 @@ $ ./nba-tui
 
 ## Options
 
-| Option      | Description                                       | Default | Minimum |
-|-------------|---------------------------------------------------|---------|---------|
-| `--reload`  | Auto-refresh interval for game data in seconds.   | 30      | 10      |
-| `--kawaii`  | Enable kawaii mode with special decorations (on/off). | on    | -       |
+| Option     | Description                                           | Default | Minimum |
+| ---------- | ----------------------------------------------------- | ------- | ------- |
+| `--reload` | Auto-refresh interval for game data in seconds.       | 30      | 10      |
+| `--kawaii` | Enable kawaii mode with special decorations (on/off). | on      | -       |
 
 ## Kawaii Mode
 
@@ -31,7 +31,7 @@ When enabled, special achievements are highlighted with icons:
 - `👽`: PTS >= 50
 - `💪`: REB >= 20
 - `🤝`: AST >= 20
-- `🛡️`: BLK >= 7
+- `🔒`: BLK >= 7
 - `🥷🏻`: STL >= 5
 
 Also underlines double-digit stats (PTS/REB/AST) and high defensive stats (STL/BLK > 3).

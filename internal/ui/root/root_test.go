@@ -116,77 +116,77 @@ func TestRootModel_Init(t *testing.T) {
 
 	cmd := m.Init()
 
-			assert.NotNil(t, cmd)
-		}
-		
-		func TestRootModel_UpdateDelegation(t *testing.T) {
-		
-			client := &mockClient{}
-		
-			m := NewModel(client, game_detail.Config{}, 30)
-		
-			// Test delegation to scoreboard
-		
-			m.state = scoreboardView
-		
-			// Send a key msg that scoreboard handles (e.g. 'j' for down)
-		
-			updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-		
-			rootM := updatedModel.(Model)
-		
-			assert.Equal(t, 0, rootM.scoreboardModel.Focus) // No games, so focus stays 0
-		
-			// Test delegation to detail
-		
-			m.state = detailView
-		
-			m.detailModel = game_detail.New(client, "123", game_detail.Config{})
-		
-			// Send a key msg that detail handles
-		
-			updatedModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
-		
-			rootM = updatedModel.(Model)
-		
-			assert.NotNil(t, rootM.detailModel)
-		
-		}
-		
-		func TestRootModel_ReloadInterval(t *testing.T) {
-			client := &mockClient{}
-		
-			tests := []struct {
-				name           string
-				inputReloadSec int
-				expectedReload time.Duration
-			}{
-				{
-					name:           "default reload 30s",
-					inputReloadSec: 30,
-					expectedReload: 30 * time.Second,
-				},
-				{
-					name:           "custom reload 60s",
-					inputReloadSec: 60,
-					expectedReload: 60 * time.Second,
-				},
-				{
-					name:           "minimum reload 10s (input 5s)",
-					inputReloadSec: 5,
-					expectedReload: 5 * time.Second, // NewModel directly uses inputReloadSec
-				},
-				{
-					name:           "minimum reload 10s (input 10s)",
-					inputReloadSec: 10,
-					expectedReload: 10 * time.Second,
-				},
-			}
-		
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					model := NewModel(client, game_detail.Config{}, tt.inputReloadSec)
-					assert.Equal(t, tt.expectedReload, model.reloadInterval)
-				})
-			}
-		}
+	assert.NotNil(t, cmd)
+}
+
+func TestRootModel_UpdateDelegation(t *testing.T) {
+
+	client := &mockClient{}
+
+	m := NewModel(client, game_detail.Config{}, 30)
+
+	// Test delegation to scoreboard
+
+	m.state = scoreboardView
+
+	// Send a key msg that scoreboard handles (e.g. 'j' for down)
+
+	updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+
+	rootM := updatedModel.(Model)
+
+	assert.Equal(t, 0, rootM.scoreboardModel.Focus) // No games, so focus stays 0
+
+	// Test delegation to detail
+
+	m.state = detailView
+
+	m.detailModel = game_detail.New(client, "123", game_detail.Config{})
+
+	// Send a key msg that detail handles
+
+	updatedModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+
+	rootM = updatedModel.(Model)
+
+	assert.NotNil(t, rootM.detailModel)
+
+}
+
+func TestRootModel_ReloadInterval(t *testing.T) {
+	client := &mockClient{}
+
+	tests := []struct {
+		name           string
+		inputReloadSec int
+		expectedReload time.Duration
+	}{
+		{
+			name:           "default reload 30s",
+			inputReloadSec: 30,
+			expectedReload: 30 * time.Second,
+		},
+		{
+			name:           "custom reload 60s",
+			inputReloadSec: 60,
+			expectedReload: 60 * time.Second,
+		},
+		{
+			name:           "minimum reload 10s (input 5s)",
+			inputReloadSec: 5,
+			expectedReload: 5 * time.Second, // NewModel directly uses inputReloadSec
+		},
+		{
+			name:           "minimum reload 10s (input 10s)",
+			inputReloadSec: 10,
+			expectedReload: 10 * time.Second,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := NewModel(client, game_detail.Config{}, tt.inputReloadSec)
+			assert.Equal(t, tt.expectedReload, model.reloadInterval)
+		})
+	}
+}

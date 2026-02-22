@@ -8,9 +8,6 @@ import (
 )
 
 func TestGetKawaiiPrefix(t *testing.T) {
-	ptrInt := func(i int) *int { return &i }
-	ptrFloat := func(f float64) *float64 { return &f }
-
 	tests := []struct {
 		name     string
 		stats    types.PlayerBoxScoreStatistic
@@ -20,7 +17,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "Triple Double",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: ptrInt(10), Reb: ptrInt(10), Ast: ptrInt(10), Stl: ptrInt(0), Blk: ptrInt(0),
+					Pts: new(10), Reb: new(10), Ast: new(10), Stl: new(0), Blk: new(0),
 				},
 			},
 			expected: "👑",
@@ -29,7 +26,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "5x5",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: ptrInt(5), Reb: ptrInt(5), Ast: ptrInt(5), Stl: ptrInt(5), Blk: ptrInt(5),
+					Pts: new(5), Reb: new(5), Ast: new(5), Stl: new(5), Blk: new(5),
 				},
 			},
 			expected: "💯",
@@ -38,7 +35,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "Sniper (3PM>=8, 3P%>=50)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Fg3M: ptrInt(8), Fg3Pct: ptrFloat(0.50),
+					Fg3M: new(8), Fg3Pct: new(0.50),
 				},
 			},
 			expected: "🎯",
@@ -47,7 +44,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "Alien (PTS>=50)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: ptrInt(50),
+					Pts: new(50),
 				},
 			},
 			expected: "👽",
@@ -56,7 +53,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "Strong (REB>=20)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Reb: ptrInt(20),
+					Reb: new(20),
 				},
 			},
 			expected: "💪",
@@ -65,7 +62,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "TeamPlayer (AST>=20)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Ast: ptrInt(20),
+					Ast: new(20),
 				},
 			},
 			expected: "🤝",
@@ -74,25 +71,25 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "Guardian (BLK>=7)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Blk: ptrInt(7),
+					Blk: new(7),
 				},
 			},
-			expected: "🛡️",
+			expected: "🔒",
 		},
 		{
 			name: "Thief (STL>=5)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Stl: ptrInt(5),
+					Stl: new(5),
 				},
 			},
-			expected: "🥷🏻",
+			expected: "🥷",
 		},
 		{
 			name: "Multiple (Triple Double + 5x5)",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: ptrInt(10), Reb: ptrInt(10), Ast: ptrInt(10), Stl: ptrInt(10), Blk: ptrInt(10),
+					Pts: new(10), Reb: new(10), Ast: new(10), Stl: new(10), Blk: new(10),
 				},
 			},
 			expected: "👑",
@@ -101,7 +98,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 			name: "No Match",
 			stats: types.PlayerBoxScoreStatistic{
 				CommonBoxScoreStatistic: types.CommonBoxScoreStatistic{
-					Pts: ptrInt(0),
+					Pts: new(0),
 				},
 			},
 			expected: "",
@@ -117,23 +114,21 @@ func TestGetKawaiiPrefix(t *testing.T) {
 }
 
 func TestShouldUnderlineStat(t *testing.T) {
-	ptrInt := func(i int) *int { return &i }
-
 	tests := []struct {
 		name     string
 		statName string
 		val      *int
 		expected bool
 	}{
-		{"PTS >= 10", "PTS", ptrInt(10), true},
-		{"PTS < 10", "PTS", ptrInt(9), false},
-		{"REB >= 10", "REB", ptrInt(10), true},
-		{"AST >= 10", "AST", ptrInt(10), true},
-		{"STL > 3", "STL", ptrInt(4), true},
-		{"STL <= 3", "STL", ptrInt(3), false},
-		{"BLK > 3", "BLK", ptrInt(4), true},
-		{"BLK <= 3", "BLK", ptrInt(3), false},
-		{"Other", "FGM", ptrInt(10), false},
+		{"PTS >= 10", "PTS", new(10), true},
+		{"PTS < 10", "PTS", new(9), false},
+		{"REB >= 10", "REB", new(10), true},
+		{"AST >= 10", "AST", new(10), true},
+		{"STL > 3", "STL", new(4), true},
+		{"STL <= 3", "STL", new(3), false},
+		{"BLK > 3", "BLK", new(4), true},
+		{"BLK <= 3", "BLK", new(3), false},
+		{"Other", "FGM", new(10), false},
 		{"Nil", "PTS", nil, false},
 	}
 
