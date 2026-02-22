@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/x/ansi"
+	runewidth "github.com/mattn/go-runewidth"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -647,9 +647,9 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				name = p.FamilyName
 			}
 			// Truncate name if too long for column (manual check for safety, though lipgloss handles it)
-			if len(name) > 15 {
-				name = name[:15]
-			}
+			// if len(name) > 15 {
+			// 	name = name[:15]
+			// }
 
 			if p.Statistics == nil {
 				// Empty row
@@ -665,9 +665,20 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			if m.config.KawaiiMode {
 				prefix := GetKawaiiPrefix(stats)
 				if prefix != "" {
-					name = prefix + " " + name
+					name = prefix + name
 				}
 			}
+            
+            // Ensure name fits within column width (15) for PLAYER column
+			const playerColWidth = 15 // cols[0].width is 15
+			currentNameWidth := runewidth.StringWidth(name)
+
+			if currentNameWidth > playerColWidth {
+				name = runewidth.Truncate(name, playerColWidth, "")
+			} else if currentNameWidth < playerColWidth {
+				name = name + strings.Repeat(" ", playerColWidth-currentNameWidth)
+			}
+
 
 			clockRaw := stats.MinutesClock()
 			min := "-"
@@ -821,11 +832,60 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 	return s
 }
 
+func visualSubstring(s string, startVisual, endVisual int) string {
+	var (
+		visualWidth int
+		startIdx    int
+		endIdx      int
+		rs          = []rune(s)
+	)
+
+	// Calculate startIdx
+	for i, r := range rs {
+		w := runewidth.RuneWidth(r)
+		if visualWidth >= startVisual {
+			startIdx = i
+			break
+		}
+		visualWidth += w
+		startIdx = i + 1 // in case visualWidth never reaches startVisual
+	}
+
+	// Calculate endIdx
+	visualWidth = 0
+	for i, r := range rs {
+		if i < startIdx { // skip until startIdx
+			continue
+		}
+		w := runewidth.RuneWidth(r)
+		if visualWidth >= endVisual-startVisual { // endVisual is absolute, endVisual-startVisual is relative
+			endIdx = i
+			break
+		}
+		visualWidth += w
+		endIdx = i + 1
+	}
+
+	// Adjust endIdx to not exceed actual string length
+	if endIdx > len(rs) {
+		endIdx = len(rs)
+	}
+	// Adjust startIdx to not exceed actual string length
+	if startIdx > len(rs) {
+		startIdx = len(rs)
+	}
+    if startIdx > endIdx {
+        return ""
+    }
+
+	return string(rs[startIdx:endIdx])
+}
+
 func (m Model) scrollLine(line string, width int) string {
 	const fixedWidth = 16
 
 	// Visual cut for the fixed part (0 to fixedWidth)
-	fixed := ansi.Cut(line, 0, fixedWidth)
+	fixed := visualSubstring(line, 0, fixedWidth)
 
 	remainingWidth := width - fixedWidth
 	if remainingWidth <= 0 {
@@ -834,10 +894,10 @@ func (m Model) scrollLine(line string, width int) string {
 
 	// Visual cut for the scrollable part
 	// Start index is relative to the whole line: fixedWidth + scroll offset
-	start := fixedWidth + m.boxScrollX
-	end := start + remainingWidth
+	startVisual := fixedWidth + m.boxScrollX
+	endVisual := startVisual + remainingWidth
 
-	scrollable := ansi.Cut(line, start, end)
+	scrollable := visualSubstring(line, startVisual, endVisual)
 
 	return fixed + scrollable
 }
