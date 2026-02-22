@@ -32,7 +32,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 					Pts: ptrInt(5), Reb: ptrInt(5), Ast: ptrInt(5), Stl: ptrInt(5), Blk: ptrInt(5),
 				},
 			},
-			expected: "💯🥷🏻",
+			expected: "💯",
 		},
 		{
 			name: "Sniper (3PM>=8, 3P%>=50)",
@@ -95,7 +95,7 @@ func TestGetKawaiiPrefix(t *testing.T) {
 					Pts: ptrInt(10), Reb: ptrInt(10), Ast: ptrInt(10), Stl: ptrInt(10), Blk: ptrInt(10),
 				},
 			},
-			expected: "👑💯🥷🏻",
+			expected: "👑",
 		},
 		{
 			name: "No Match",

@@ -86,9 +86,9 @@ func GetKawaiiPrefix(stats types.PlayerBoxScoreStatistic) string {
 		prefixes = append(prefixes, "💪")
 	}
 
-	// Max 3
-	if len(prefixes) > 3 {
-		prefixes = prefixes[:3]
+	// Max 1
+	if len(prefixes) > 1 {
+		prefixes = prefixes[:1]
 	}
 
 	return strings.Join(prefixes, "")
