@@ -666,10 +666,6 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				prefix := GetKawaiiPrefix(stats)
 				if prefix != "" {
 					name = prefix + " " + name
-					// Adjust length check? Lipgloss handles visual width, but truncation logic might need update.
-					// If prefix is added, name column might overflow.
-					// Column width is 15. Emoji is 2 chars width usually.
-					// Let's just prepend.
 				}
 			}
 
@@ -679,50 +675,67 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				min = clockRaw[:5]
 			}
 
-			ptsStr := utils.PtrToIntStr(stats.Pts)
-			rebStr := utils.PtrToIntStr(stats.Reb)
-			astStr := utils.PtrToIntStr(stats.Ast)
-			stlStr := utils.PtrToIntStr(stats.Stl)
-			blkStr := utils.PtrToIntStr(stats.Blk)
-			pmStr := utils.PtrToFloatStr2f(stats.PlusMinus)
+			// Prepare individual stat strings
+			ptsVal := stats.Pts
+			rebVal := stats.Reb
+			astVal := stats.Ast
+			stlVal := stats.Stl
+			blkVal := stats.Blk
+			pmVal := stats.PlusMinus
 
-			if !m.config.NoDecoration {
-				if stats.Pts != nil && *stats.Pts == maxPts && maxPts > 0 {
-					ptsStr = styles.BoldStyle.Render(ptsStr)
+			// Initialize base styles for each stat
+			ptsStyle := lipgloss.NewStyle()
+			rebStyle := lipgloss.NewStyle()
+			astStyle := lipgloss.NewStyle()
+			stlStyle := lipgloss.NewStyle()
+			blkStyle := lipgloss.NewStyle()
+			pmStyle := lipgloss.NewStyle()
+
+			if !m.config.NoDecoration { // Apply Team High bolding and Plus/Minus colors
+				if ptsVal != nil && *ptsVal == maxPts && maxPts > 0 {
+					ptsStyle = ptsStyle.Bold(true)
 				}
-				if stats.Reb != nil && *stats.Reb == maxReb && maxReb > 0 {
-					rebStr = styles.BoldStyle.Render(rebStr)
+				if rebVal != nil && *rebVal == maxReb && maxReb > 0 {
+					rebStyle = rebStyle.Bold(true)
 				}
-				if stats.Ast != nil && *stats.Ast == maxAst && maxAst > 0 {
-					astStr = styles.BoldStyle.Render(astStr)
+				if astVal != nil && *astVal == maxAst && maxAst > 0 {
+					astStyle = astStyle.Bold(true)
 				}
 
-				if stats.PlusMinus != nil {
-					if *stats.PlusMinus > 0 {
-						pmStr = styles.GreenStyle.Render(pmStr)
-					} else if *stats.PlusMinus < 0 {
-						pmStr = styles.RedStyle.Render(pmStr)
+				if pmVal != nil {
+					if *pmVal > 0 {
+						pmStyle = pmStyle.Foreground(lipgloss.Color("2")) // Green
+					} else if *pmVal < 0 {
+						pmStyle = pmStyle.Foreground(lipgloss.Color("1")) // Red
 					}
 				}
 			}
 
-			if m.config.KawaiiMode {
-				if ShouldUnderlineStat("PTS", stats.Pts) {
-					ptsStr = styles.UnderlineStyle.Render(ptsStr)
+			if m.config.KawaiiMode { // Apply Underlining
+				if ShouldUnderlineStat("PTS", ptsVal) {
+					ptsStyle = ptsStyle.Underline(true)
 				}
-				if ShouldUnderlineStat("REB", stats.Reb) {
-					rebStr = styles.UnderlineStyle.Render(rebStr)
+				if ShouldUnderlineStat("REB", rebVal) {
+					rebStyle = rebStyle.Underline(true)
 				}
-				if ShouldUnderlineStat("AST", stats.Ast) {
-					astStr = styles.UnderlineStyle.Render(astStr)
+				if ShouldUnderlineStat("AST", astVal) {
+					astStyle = astStyle.Underline(true)
 				}
-				if ShouldUnderlineStat("STL", stats.Stl) {
-					stlStr = styles.UnderlineStyle.Render(stlStr)
+				if ShouldUnderlineStat("STL", stlVal) {
+					stlStyle = stlStyle.Underline(true)
 				}
-				if ShouldUnderlineStat("BLK", stats.Blk) {
-					blkStr = styles.UnderlineStyle.Render(blkStr)
+				if ShouldUnderlineStat("BLK", blkVal) {
+					blkStyle = blkStyle.Underline(true)
 				}
 			}
+
+			// Render all stats with combined styles
+			ptsStr := ptsStyle.Render(utils.PtrToIntStr(ptsVal))
+			rebStr := rebStyle.Render(utils.PtrToIntStr(rebVal))
+			astStr := astStyle.Render(utils.PtrToIntStr(astVal))
+			stlStr := stlStyle.Render(utils.PtrToIntStr(stlVal))
+			blkStr := blkStyle.Render(utils.PtrToIntStr(blkVal))
+			pmStr := pmStyle.Render(utils.PtrToFloatStr2f(pmVal))
 
 			// Construct values matching cols order
 			rowVals := []string{
