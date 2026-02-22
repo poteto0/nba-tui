@@ -30,6 +30,7 @@ type NbaClient interface {
 
 type Config struct {
 	NoDecoration bool
+	KawaiiMode   bool
 }
 
 type Model struct {
@@ -660,6 +661,18 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			}
 			stats := *p.Statistics
 
+			// Kawaii Mode Prefix
+			if m.config.KawaiiMode {
+				prefix := GetKawaiiPrefix(stats)
+				if prefix != "" {
+					name = prefix + " " + name
+					// Adjust length check? Lipgloss handles visual width, but truncation logic might need update.
+					// If prefix is added, name column might overflow.
+					// Column width is 15. Emoji is 2 chars width usually.
+					// Let's just prepend.
+				}
+			}
+
 			clockRaw := stats.MinutesClock()
 			min := "-"
 			if len(clockRaw) > 5 {
@@ -669,6 +682,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 			ptsStr := utils.PtrToIntStr(stats.Pts)
 			rebStr := utils.PtrToIntStr(stats.Reb)
 			astStr := utils.PtrToIntStr(stats.Ast)
+			stlStr := utils.PtrToIntStr(stats.Stl)
+			blkStr := utils.PtrToIntStr(stats.Blk)
 			pmStr := utils.PtrToFloatStr2f(stats.PlusMinus)
 
 			if !m.config.NoDecoration {
@@ -691,6 +706,24 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				}
 			}
 
+			if m.config.KawaiiMode {
+				if ShouldUnderlineStat("PTS", stats.Pts) {
+					ptsStr = styles.UnderlineStyle.Render(ptsStr)
+				}
+				if ShouldUnderlineStat("REB", stats.Reb) {
+					rebStr = styles.UnderlineStyle.Render(rebStr)
+				}
+				if ShouldUnderlineStat("AST", stats.Ast) {
+					astStr = styles.UnderlineStyle.Render(astStr)
+				}
+				if ShouldUnderlineStat("STL", stats.Stl) {
+					stlStr = styles.UnderlineStyle.Render(stlStr)
+				}
+				if ShouldUnderlineStat("BLK", stats.Blk) {
+					blkStr = styles.UnderlineStyle.Render(blkStr)
+				}
+			}
+
 			// Construct values matching cols order
 			rowVals := []string{
 				name, min,
@@ -707,8 +740,8 @@ func (m Model) renderBoxScore(team types.Team, width, height int) string {
 				utils.PtrToIntStr(stats.DReb),
 				rebStr,
 				astStr,
-				utils.PtrToIntStr(stats.Stl),
-				utils.PtrToIntStr(stats.Blk),
+				stlStr,
+				blkStr,
 				utils.PtrToIntStr(stats.Tov),
 				utils.PtrToIntStr(stats.PF),
 				ptsStr,

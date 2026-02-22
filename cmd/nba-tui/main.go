@@ -16,6 +16,7 @@ func main() {
 	mock := flag.Bool("mock", false, "Use mock data for testing")
 	noDeco := flag.Bool("no-decoration", false, "Disable color decorations")
 	reload := flag.Int("reload", 30, "Reload interval in seconds (min 10s)")
+	kawaii := flag.String("kawaii", "on", "Enable kawaii mode (on|off)")
 	flag.Parse()
 
 	if *reload < 10 {
@@ -29,8 +30,14 @@ func main() {
 		client = nba.NewClient()
 	}
 
+	kawaiiMode := true
+	if *kawaii == "off" {
+		kawaiiMode = false
+	}
+
 	config := game_detail.Config{
 		NoDecoration: *noDeco,
+		KawaiiMode:   kawaiiMode,
 	}
 	m := root.NewModel(client, config, *reload)
 

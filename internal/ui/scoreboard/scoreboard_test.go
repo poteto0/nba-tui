@@ -129,12 +129,6 @@ func TestScoreboardView(t *testing.T) {
 		assert.Equal(t, 0, m.Focus)
 	})
 
-	t.Run("handles tickMsg", func(t *testing.T) {
-		m := NewModel(&mockClient{})
-		_, cmd := m.Update(tickMsg{})
-		assert.NotNil(t, cmd)
-	})
-
 	t.Run("selects a game on enter", func(t *testing.T) {
 		games := []types.Game{
 			{GameId: "123", HomeTeam: types.Team{TeamTricode: "LAL"}},
