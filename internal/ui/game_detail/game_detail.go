@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/poteto0/go-nba-sdk/types"
@@ -32,24 +33,34 @@ type Config struct {
 }
 
 type Model struct {
-	client         NbaClient
-	gameID         string
-	boxScore       types.LiveBoxScoreResponse
-	pbp            types.LivePlayByPlayResponse
-	showingHome    bool
-	lastUpdated    time.Time
-	focus          focusArea
-	logOffset      int
-	boxOffset      int
-	boxScrollX     int
-	selectedPeriod int
-	width          int
-	height         int
-	OpenBrowser    func(string) error
-	config         Config
+	client            NbaClient
+	gameID            string
+	boxScore          types.LiveBoxScoreResponse
+	pbp               types.LivePlayByPlayResponse
+	showingHome       bool
+	lastUpdated       time.Time
+	focus             focusArea
+	logOffset         int
+	boxOffset         int
+	boxScrollX        int
+	selectedPeriod    int
+	width             int
+	height            int
+	OpenBrowser       func(string) error
+	config            Config
+	searchInput       textinput.Model
+	searchMode        bool
+	matchedIndices    []int
+	currentMatchIndex int
 }
 
 func New(client NbaClient, gameID string, config Config) Model {
+	ti := textinput.New()
+	ti.Placeholder = "Search..."
+	ti.Prompt = "/"
+	ti.CharLimit = 156
+	ti.Width = 30
+
 	return Model{
 		client:         client,
 		gameID:         gameID,
@@ -58,7 +69,8 @@ func New(client NbaClient, gameID string, config Config) Model {
 		OpenBrowser: func(url string) error {
 			return exec.Command("xdg-open", url).Start()
 		},
-		config: config,
+		config:      config,
+		searchInput: ti,
 	}
 }
 
@@ -120,7 +132,45 @@ func (m Model) getCurrentTeam() types.Team {
 	return m.boxScore.Game.AwayTeam
 }
 
+func (m Model) getVisibleActions() []types.Action {
+	team := m.getCurrentTeam()
+	var filteredActions []types.Action
+	for _, action := range m.pbp.Game.Actions {
+		if action.Period == m.selectedPeriod && action.TeamID == team.TeamId {
+			filteredActions = append(filteredActions, action)
+		}
+	}
+	return filteredActions
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.searchMode {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				m.searchMode = false
+				query := m.searchInput.Value()
+				actions := m.getVisibleActions()
+				m.matchedIndices = SearchActions(actions, query)
+				if len(m.matchedIndices) > 0 {
+					m.currentMatchIndex = 0
+					m.logOffset = m.matchedIndices[0]
+					// Auto-switch to game log focus if search found something
+					m.focus = gameLogFocus
+				}
+				return m, nil
+			case tea.KeyEsc:
+				m.searchMode = false
+				m.searchInput.Blur()
+				return m, nil
+			}
+		}
+		var cmd tea.Cmd
+		m.searchInput, cmd = m.searchInput.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -137,9 +187,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		team := m.getCurrentTeam()
 		switch msg.String() {
+		case "/":
+			m.searchMode = true
+			m.searchInput.Focus()
+			m.searchInput.SetValue("")
+			return m, nil
+		case "n":
+			if len(m.matchedIndices) > 0 {
+				m.currentMatchIndex++
+				if m.currentMatchIndex >= len(m.matchedIndices) {
+					m.currentMatchIndex = 0
+				}
+				m.logOffset = m.matchedIndices[m.currentMatchIndex]
+				m.focus = gameLogFocus
+			}
+		case "N":
+			if len(m.matchedIndices) > 0 {
+				m.currentMatchIndex--
+				if m.currentMatchIndex < 0 {
+					m.currentMatchIndex = len(m.matchedIndices) - 1
+				}
+				m.logOffset = m.matchedIndices[m.currentMatchIndex]
+				m.focus = gameLogFocus
+			}
 		case "ctrl+s":
 			m.showingHome = !m.showingHome
 			m.logOffset = 0
+			m.matchedIndices = []int{}
+			m.currentMatchIndex = 0
 		case "ctrl+c":
 			return m, tea.Quit
 		case "ctrl+q":
@@ -148,6 +223,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedPeriod = 1
 			}
 			m.logOffset = 0
+			m.matchedIndices = []int{}
+			m.currentMatchIndex = 0
 		case "ctrl+w":
 			url := fmt.Sprintf("https://www.nba.com/game/%s", m.gameID)
 			if m.OpenBrowser != nil {
@@ -193,12 +270,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			} else {
-				var filteredActions []types.Action
-				for _, action := range m.pbp.Game.Actions {
-					if action.Period == m.selectedPeriod && action.TeamID == team.TeamId {
-						filteredActions = append(filteredActions, action)
-					}
-				}
+				filteredActions := m.getVisibleActions()
 				if m.logOffset < len(filteredActions)-1 {
 					m.logOffset++
 				}
@@ -239,9 +311,15 @@ func (m Model) View() string {
 	selectedTeamView := styles.UnderlineStyle.Render(teamInfo)
 
 	// Render footer first to know its height
-	footerRaw := m.renderFooter(m.width)
-	h_footer := lipgloss.Height(footerRaw)
-	footerView := lipgloss.NewStyle().Width(m.width).Height(h_footer).MaxHeight(h_footer).Render(footerRaw)
+	var footerView string
+	if m.searchMode {
+		footerView = m.searchInput.View()
+	} else {
+		footerView = m.renderFooter(m.width)
+	}
+
+	h_footer := lipgloss.Height(footerView)
+	footerView = lipgloss.NewStyle().Width(m.width).Height(h_footer).MaxHeight(h_footer).Render(footerView)
 
 	// 2. Allocate remaining height based on ratios
 	// Available for Header + Main
@@ -417,13 +495,7 @@ func (m Model) renderGameLog(width, height int) string {
 
 	gameLogHeader := lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render("gamelog")
 
-	team := m.getCurrentTeam()
-	var filteredActions []types.Action
-	for _, action := range m.pbp.Game.Actions {
-		if action.Period == m.selectedPeriod && action.TeamID == team.TeamId {
-			filteredActions = append(filteredActions, action)
-		}
-	}
+	filteredActions := m.getVisibleActions()
 
 	bodyHeight := height - 2 // Minus header and selector
 	if bodyHeight < 1 {
@@ -441,7 +513,24 @@ func (m Model) renderGameLog(width, height int) string {
 			if len(desc) > descMaxWidth && descMaxWidth > 3 {
 				desc = desc[:descMaxWidth-3] + "..."
 			}
-			logLines = append(logLines, fmt.Sprintf("% -5s|%s", action.Clock, desc))
+
+			line := fmt.Sprintf("% -5s|%s", action.Clock, desc)
+
+			// Highlight matching rows
+			for _, matchIdx := range m.matchedIndices {
+				if matchIdx == idx {
+					// Check if it's the currently selected match
+					if idx == m.matchedIndices[m.currentMatchIndex] {
+						// Maybe distinct highlight for current match?
+						line = styles.HighlightStyle.Bold(true).Render(line)
+					} else {
+						line = styles.HighlightStyle.Render(line)
+					}
+					break
+				}
+			}
+
+			logLines = append(logLines, line)
 		}
 	}
 	gameLogBody := strings.Join(logLines, "\n")

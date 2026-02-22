@@ -28,4 +28,6 @@ var (
 
 	GreenStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 	RedStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+
+	HighlightStyle = lipgloss.NewStyle().Background(lipgloss.Color("3")).Foreground(lipgloss.Color("0"))
 )
