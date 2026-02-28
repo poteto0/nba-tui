@@ -265,10 +265,10 @@ func TestModel_FetchFunctions(t *testing.T) {
 	t.Run("fetch failure", func(t *testing.T) {
 		client.err = fmt.Errorf("api error")
 		msg := m.fetchBoxScore()
-		assert.Equal(t, client.err, msg.(ErrorMsg))
+		assert.Equal(t, client.err.Error(), msg.(error).Error())
 
 		msg = m.fetchPlayByPlay()
-		assert.Equal(t, client.err, msg.(ErrorMsg))
+		assert.Equal(t, client.err.Error(), msg.(error).Error())
 		client.err = nil
 	})
 }

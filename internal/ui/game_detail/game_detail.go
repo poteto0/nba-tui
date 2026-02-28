@@ -52,6 +52,8 @@ type Model struct {
 	searchMode        bool
 	matchedIndices    []int
 	currentMatchIndex int
+	retryCount        int
+	errMsg            string
 }
 
 func New(client NbaClient, gameID string, config Config) Model {
@@ -105,10 +107,18 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
+type boxScoreErrMsg struct{ err error }
+
+func (e boxScoreErrMsg) Error() string { return e.err.Error() }
+
+type pbpErrMsg struct{ err error }
+
+func (e pbpErrMsg) Error() string { return e.err.Error() }
+
 func (m Model) fetchBoxScore() tea.Msg {
 	res, err := m.client.GetBoxScore(m.gameID)
 	if err != nil {
-		return ErrorMsg(err)
+		return boxScoreErrMsg{err}
 	}
 	return BoxScoreMsg(res)
 }
@@ -116,7 +126,7 @@ func (m Model) fetchBoxScore() tea.Msg {
 func (m Model) fetchPlayByPlay() tea.Msg {
 	res, err := m.client.GetPlayByPlay(m.gameID)
 	if err != nil {
-		return ErrorMsg(err)
+		return pbpErrMsg{err}
 	}
 	return PlayByPlayMsg(res)
 }
@@ -180,10 +190,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case BoxScoreMsg:
 		m.boxScore = types.LiveBoxScoreResponse(msg)
 		m.lastUpdated = time.Now()
+		m.errMsg = ""
+		m.retryCount = 0
 
 	case PlayByPlayMsg:
 		m.pbp = types.LivePlayByPlayResponse(msg)
 		m.lastUpdated = time.Now()
+
+	case boxScoreErrMsg:
+		if m.boxScore.Game.GameId == "" {
+			m.retryCount++
+			if m.retryCount <= 3 {
+				return m, m.fetchBoxScore
+			}
+			m.errMsg = "Cannot get game's data.\nMaybe before game, you can back scoreboard press <esc>"
+		}
+		return m, nil
 
 	case tea.KeyMsg:
 		team := m.getCurrentTeam()
@@ -292,6 +314,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.errMsg != "" {
+		return m.errMsg
+	}
 	if m.boxScore.Game.GameId == "" {
 		return "Loading..."
 	}
